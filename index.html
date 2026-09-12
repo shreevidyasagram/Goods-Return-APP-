@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shree Vidyasagram — Return Goods</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --ink: #1c2430;
+    --ink-soft: #5b6472;
+    --paper: #f6f4ef;
+    --card: #ffffff;
+    --line: #dcd7cc;
+    --accent: #2f5233;
+    --accent-soft: #e7efe8;
+    --danger: #a4442e;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  header {
+    background: var(--ink);
+    color: #f6f4ef;
+    padding: 18px 20px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header .brand { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
+  header .sub { font-size: 0.78rem; color: #b7bdc4; }
+  nav {
+    display: flex;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  nav button {
+    flex: 1;
+    padding: 14px 10px;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+  }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  main { max-width: 640px; margin: 0 auto; padding: 18px 16px 60px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); margin-bottom: 5px; }
+  input, select {
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .field { margin-bottom: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .items-head, .item-row {
+    display: grid;
+    grid-template-columns: 1.6fr 0.7fr 0.9fr 0.9fr 30px;
+    gap: 8px;
+    align-items: center;
+  }
+  .items-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin-bottom: 6px; }
+  .item-row { margin-bottom: 8px; }
+  .item-row input { padding: 8px 9px; font-size: 0.88rem; }
+  .item-total { font-size: 0.88rem; padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; }
+  .rm-btn {
+    border: none; background: none; color: var(--danger); font-size: 1.1rem;
+    cursor: pointer; line-height: 1; padding: 4px;
+  }
+  .add-item {
+    margin-top: 4px; background: var(--accent-soft); color: var(--accent);
+    border: 1px dashed var(--accent); border-radius: 7px; padding: 9px 12px;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; width: 100%;
+  }
+  .grand-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
+    font-size: 1.05rem; font-weight: 700;
+  }
+  .grand-total span:last-child { font-variant-numeric: tabular-nums; }
+  .primary-btn {
+    width: 100%; padding: 13px; border: none; border-radius: 8px;
+    background: var(--accent); color: #fff; font-size: 1rem; font-weight: 700;
+    cursor: pointer; margin-top: 16px;
+  }
+  .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .empty { text-align: center; color: var(--ink-soft); padding: 40px 20px; font-size: 0.92rem; }
+  .slip-card {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 14px 16px; cursor: pointer;
+  }
+  .slip-card + .slip-card { border-top: 1px solid var(--line); }
+  .slip-main .party { font-weight: 700; font-size: 0.98rem; }
+  .slip-main .meta { font-size: 0.78rem; color: var(--ink-soft); margin-top: 2px; }
+  .slip-amount { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .detail-back { background: none; border: none; color: var(--accent); font-weight: 600; padding: 0 0 12px; cursor: pointer; font-size: 0.9rem; }
+  .detail-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.88rem; }
+  .detail-table th, .detail-table td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); }
+  .detail-table th { color: var(--ink-soft); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  .detail-table td:nth-child(n+2), .detail-table th:nth-child(n+2) { text-align: right; }
+  .action-row { display: flex; gap: 10px; margin-top: 16px; }
+  .action-row button {
+    flex: 1; padding: 11px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-outline { background: #fff; border: 1px solid var(--accent); color: var(--accent); }
+  .btn-fill { background: var(--accent); border: none; color: #fff; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 20px;
+    font-size: 0.85rem; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .toast.show { opacity: 1; }
+  .storage-note {
+    font-size: 0.72rem; color: var(--ink-soft); text-align: center; margin-top: 18px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div id="loginView" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div class="card" style="width:100%;max-width:420px;">
+    <div style="text-align:center;margin-bottom:22px;">
+      <div class="brand" style="font-size:1.35rem;font-weight:800;">SHREE VIDYASAGRAM</div>
+      <div class="sub" style="margin-top:4px;">Return Goods</div>
+    </div>
+    <div class="field">
+      <label for="loginUsername">Username</label>
+      <input id="loginUsername" type="text" autocomplete="username" placeholder="Enter username">
+    </div>
+    <div class="field">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" onkeydown="if(event.key==='Enter') login()">
+    </div>
+    <button class="primary-btn" style="margin-top:4px;" id="loginBtn" onclick="login()">Login</button>
+    <div style="font-size:.75rem;color:var(--ink-soft);text-align:center;margin-top:12px;">Username-based login · Staff do not need Google accounts</div>
+  </div>
+</div>
+
+<div id="appView" style="display:none;">
+<header>
+  <div>
+    <div class="brand">SHREE VIDYASAGRAM</div>
+    <div class="sub">Return Goods · <span id="currentUserLabel"></span></div>
+  </div>
+  <button onclick="logout()" style="border:1px solid #6d7580;background:transparent;color:#fff;border-radius:7px;padding:8px 11px;cursor:pointer;">Logout</button>
+</header>
+
+<nav>
+  <button id="tab-new" class="active" onclick="showTab('new')">New Return</button>
+  <button id="tab-history" onclick="showTab('history')">History</button>
+  <button id="tab-reports" onclick="showTab('reports')">Reports</button>
+  <button id="tab-staff" style="display:none" onclick="showTab('staff')">Staff</button>
+</nav>
+
+<main>
+
+  <!-- NEW RETURN SLIP -->
+  <section id="view-new">
+    <div class="card">
+      <div class="row2">
+        <div class="field">
+          <label for="partyName">Party Name</label>
+          <input id="partyName" type="text" placeholder="e.g. Naman Enterprise">
+        </div>
+        <div class="field">
+          <label for="dmNumber">DM Number</label>
+          <input id="dmNumber" type="text" placeholder="e.g. DM-1042">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="items-head">
+        <div>Article No.</div><div>Qty</div><div>Price/Pc</div><div>Total</div><div></div>
+      </div>
+      <div id="itemsContainer"></div>
+      <button class="add-item" onclick="addItemRow()">+ Add item</button>
+      <div class="grand-total"><span>Grand Total</span><span id="grandTotal">₹0.00</span></div>
+      <button class="primary-btn" id="saveBtn" onclick="saveSlip()">Save &amp; Generate PDF</button>
+    </div>
+  </section>
+
+  <!-- HISTORY LIST -->
+  <section id="view-history" style="display:none">
+    <div class="card" style="padding:0" id="historyList"></div>
+  </section>
+
+
+  <!-- REPORTS -->
+  <section id="view-reports" style="display:none">
+    <div class="card">
+      <div class="field">
+        <label for="reportFrom">From Date</label>
+        <input id="reportFrom" type="date">
+      </div>
+      <div class="field">
+        <label for="reportTo">To Date</label>
+        <input id="reportTo" type="date">
+      </div>
+      <div class="action-row">
+        <button class="btn-outline" onclick="showDateReport()">View Data</button>
+        <button class="btn-fill" onclick="exportDateRangeExcel()">Download Excel</button>
+      </div>
+    </div>
+    <div class="card" style="padding:0" id="reportSummary"></div>
+    <div class="card" style="padding:0" id="reportList"></div>
+  </section>
+
+  <!-- STAFF MANAGEMENT (ADMIN ONLY) -->
+  <section id="view-staff" style="display:none">
+    <div class="card">
+      <div style="font-weight:700;font-size:1.05rem;margin-bottom:14px;">Add Staff</div>
+      <div class="field">
+        <label for="staffUsername">Staff Username</label>
+        <input id="staffUsername" type="text" placeholder="e.g. rahul">
+      </div>
+      <div class="field">
+        <label for="staffPassword">Staff Password</label>
+        <input id="staffPassword" type="password" placeholder="Create password">
+      </div>
+      <button class="primary-btn" onclick="addStaff()">+ Add Staff</button>
+      <div style="font-size:.75rem;color:var(--ink-soft);margin-top:10px;">Staff will log in using only this username and password.</div>
+    </div>
+    <div class="card" style="padding:0" id="staffList"></div>
+  </section>
+
+  <!-- SLIP DETAIL -->
+  <section id="view-detail" style="display:none">
+    <button class="detail-back" onclick="showTab('history')">&larr; Back to history</button>
+    <div class="card" id="detailCard"></div>
+  </section>
+
+  <div class="storage-note">
+    Return slips are saved in the shared cloud database. Reports are available to staff; printing and Excel export are admin-only.
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    getDoc,
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    doc,
+    query,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC-k7mOHj5XSshZ2dG0Hqfcc8rHqR3e7tU",
+    authDomain: "return-goods-255c7.firebaseapp.com",
+    projectId: "return-goods-255c7",
+    storageBucket: "return-goods-255c7.firebasestorage.app",
+    messagingSenderId: "76859901881",
+    appId: "1:76859901881:web:19d22f279839eae8c0d868",
+    measurementId: "G-XXQ9NP2G1D"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const staffCreatorApp = initializeApp(firebaseConfig, "staffCreator");
+  const staffCreatorAuth = getAuth(staffCreatorApp);
+  const slipsCollection = collection(db, "returnSlips");
+  const usersCollection = collection(db, "users");
+  const { jsPDF } = window.jspdf;
+
+  // The admin account you created in Firebase Console. The app shows this as the username "admin".
+  const ADMIN_USERNAME = "admin";
+  const ADMIN_EMAIL = "shreevidyasagram1@gmail.com";
+  const USER_DOMAIN = "@returngoods.local";
+
+  let items = [];
+  let cloudSlips = [];
+  let currentUser = null;
+  let currentRole = null;
+  let editingSlipId = null;
+
+  function usernameToEmail(username) {
+    const u = String(username || '').trim().toLowerCase();
+    if (u === ADMIN_USERNAME) return ADMIN_EMAIL;
+    return u.replace(/[^a-z0-9._-]/g, '') + USER_DOMAIN;
+  }
+
+  function isAdmin() { return currentRole === 'admin'; }
+
+  function applyRoleUI() {
+    const admin = isAdmin();
+    document.getElementById('tab-staff').style.display = admin ? 'block' : 'none';
+    const excelBtn = document.querySelector('#view-reports .btn-fill');
+    if (excelBtn) excelBtn.style.display = admin ? 'block' : 'none';
+    document.getElementById('currentUserLabel').textContent = admin ? 'Admin' : `Staff · ${currentUser?.username || ''}`;
+  }
+
+  async function ensureAdminProfile(user) {
+    const ref = doc(db, 'users', user.uid);
+    await setDoc(ref, { username: ADMIN_USERNAME, role: 'admin', active: true, email: user.email }, { merge: true });
+  }
+
+  async function loadCurrentProfile(user) {
+    if (user.email === ADMIN_EMAIL) {
+      await ensureAdminProfile(user);
+      currentUser = { uid: user.uid, username: ADMIN_USERNAME };
+      currentRole = 'admin';
+      return true;
+    }
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (!snap.exists() || snap.data().active !== true) return false;
+    const data = snap.data();
+    currentUser = { uid: user.uid, username: data.username || 'staff' };
+    currentRole = data.role === 'admin' ? 'admin' : 'staff';
+    return true;
+  }
+
+  function uid() {
+    return Array.from(crypto.getRandomValues(new Uint8Array(4)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function money(n) {
+    return '₹' + (Math.round(n * 100) / 100).toFixed(2);
+  }
+
+  async function login() {
+    const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+    const password = document.getElementById('loginPassword').value;
+    if (!username || !password) { toast('Enter username and password'); return; }
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    try {
+      const credential = await signInWithEmailAndPassword(auth, usernameToEmail(username), password);
+      const allowed = await loadCurrentProfile(credential.user);
+      if (!allowed) {
+        await signOut(auth);
+        throw new Error('This account is not active in Return Goods.');
+      }
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('appView').style.display = 'block';
+      applyRoleUI();
+      showTab('new');
+      toast('Login successful');
+    } catch (e) {
+      console.error(e);
+      toast(e.message && e.message.includes('not active') ? e.message : 'Invalid username or password');
+    } finally { btn.disabled = false; }
+  }
+
+  async function logout() {
+    await signOut(auth);
+    currentUser = null;
+    currentRole = null;
+    cloudSlips = [];
+    document.getElementById('appView').style.display = 'none';
+    document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('loginPassword').value = '';
+  }
+
+  async function addStaff() {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    const username = document.getElementById('staffUsername').value.trim().toLowerCase();
+    const password = document.getElementById('staffPassword').value;
+    if (!/^[a-z0-9._-]{3,30}$/.test(username)) { toast('Username: 3-30 letters/numbers'); return; }
+    if (username === ADMIN_USERNAME) { toast('That username is reserved'); return; }
+    if (password.length < 6) { toast('Password must be at least 6 characters'); return; }
+    try {
+      const existing = await getDocs(query(usersCollection, orderBy('username')));
+      if (existing.docs.some(d => (d.data().username || '').toLowerCase() === username)) {
+        toast('Username already exists'); return;
+      }
+      const cred = await createUserWithEmailAndPassword(staffCreatorAuth, usernameToEmail(username), password);
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        username, role: 'staff', active: true, createdAt: new Date().toISOString()
+      });
+      await signOut(staffCreatorAuth);
+      document.getElementById('staffUsername').value = '';
+      document.getElementById('staffPassword').value = '';
+      toast('Staff added');
+      renderStaff();
+    } catch (e) {
+      console.error(e);
+      toast(e.code === 'auth/email-already-in-use' ? 'Username already exists' : 'Could not add staff');
+      try { await signOut(staffCreatorAuth); } catch (_) {}
+    }
+  }
+
+  async function renderStaff() {
+    if (!isAdmin()) return;
+    const list = document.getElementById('staffList');
+    list.innerHTML = '<div class="empty">Loading staff...</div>';
+    try {
+      const snap = await getDocs(query(usersCollection, orderBy('username')));
+      const staff = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.role === 'staff');
+      if (!staff.length) { list.innerHTML = '<div class="empty">No staff added yet.</div>'; return; }
+      list.innerHTML = '';
+      staff.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'slip-card';
+        div.style.cursor = 'default';
+        div.innerHTML = `<div class="slip-main"><div class="party">${escapeHtml(u.username)}</div><div class="meta">${u.active ? 'Active' : 'Inactive'}</div></div><button class="btn-outline" style="flex:0 0 auto;padding:8px 12px;" onclick="toggleStaff('${u.id}', ${u.active ? 'false' : 'true'})">${u.active ? 'Disable' : 'Enable'}</button>`;
+        list.appendChild(div);
+      });
+    } catch (e) {
+      console.error(e);
+      list.innerHTML = '<div class="empty">Could not load staff.</div>';
+    }
+  }
+
+  async function deleteSlip(slipId) {
+    if (!isAdmin()) { toast('Admin only'); return; }
+    const slip = cloudSlips.find(s => s.id === slipId);
+    if (!slip) { toast('Slip not found'); return; }
+    if (!confirm(`Delete return slip for ${slip.party}? This cannot be undone.`)) return;
+    try {
+      await deleteDoc(doc(db, 'returnSlips', slipId));
+      await loadSlips();
+      toast('Return slip deleted');
+      showTab('history');
+    } catch (e) {
+      console.error(e);
+      toast('Could not delete slip');
+    }
+  }
+
+  async function toggleStaff(uid, active) {
+    if (!isAdmin()) return;
+    try {
+      await updateDoc(doc(db, 'users', uid), { active });
+      toast(active ? 'Staff enabled' : 'Staff disabled');
+      renderStaff();
+    } catch (e) {
+      console.error(e);
+      toast('Could not update staff');
+    }
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      document.getElementById('appView').style.display = 'none';
+      document.getElementById('loginView').style.display = 'flex';
+      return;
+    }
+    try {
+      const allowed = await loadCurrentProfile(user);
+      if (!allowed) { await signOut(auth); return; }
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('appView').style.display = 'block';
+      applyRoleUI();
+    } catch (e) {
+      console.error(e);
+      await signOut(auth);
+    }
+  });
+
+  function addItemRow(data) {
+    const row = { id: uid(), article: data?.article || '', qty: data?.qty ?? '', price: data?.price ?? '' };
+    items.push(row);
+    renderItems();
+  }
+
+  function removeItemRow(id) {
+    items = items.filter(i => i.id !== id);
+    if (items.length === 0) addItemRow();
+    else renderItems();
+  }
+
+  function renderItems() {
+    const container = document.getElementById('itemsContainer');
+    container.innerHTML = '';
+    items.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'item-row';
+      div.innerHTML = `
+        <input type="text" value="${escapeHtml(row.article)}" placeholder="Article #" oninput="updateItem('${row.id}','article',this.value)">
+        <input type="number" min="0" value="${row.qty}" placeholder="0" oninput="updateItem('${row.id}','qty',this.value)">
+        <input type="number" min="0" step="0.01" value="${row.price}" placeholder="0.00" oninput="updateItem('${row.id}','price',this.value)">
+        <div class="item-total">${money((parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0))}</div>
+        <button class="rm-btn" onclick="removeItemRow('${row.id}')" title="Remove">✕</button>
+      `;
+      container.appendChild(div);
+    });
+    updateGrandTotal();
+  }
+
+  function updateItem(id, field, value) {
+    const row = items.find(i => i.id === id);
+    if (row) row[field] = value;
+    updateGrandTotal();
+    const idx = items.findIndex(i => i.id === id);
+    const cell = document.getElementById('itemsContainer').children[idx]?.querySelector('.item-total');
+    if (cell) {
+      const r = items[idx];
+      cell.textContent = money((parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0));
+    }
+  }
+
+  function updateGrandTotal() {
+    const total = items.reduce((sum, r) => sum + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
+    document.getElementById('grandTotal').textContent = money(total);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function showTab(tab) {
+    document.getElementById('view-new').style.display = tab === 'new' ? 'block' : 'none';
+    document.getElementById('view-history').style.display = tab === 'history' ? 'block' : 'none';
+    document.getElementById('view-detail').style.display = tab === 'detail' ? 'block' : 'none';
+    document.getElementById('view-reports').style.display = tab === 'reports' ? 'block' : 'none';
+    document.getElementById('view-staff').style.display = tab === 'staff' ? 'block' : 'none';
+    document.getElementById('tab-new').classList.toggle('active', tab === 'new');
+    document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+    document.getElementById('tab-reports').classList.toggle('active', tab === 'reports');
+    document.getElementById('tab-staff').classList.toggle('active', tab === 'staff');
+    if (tab === 'history') renderHistory();
+    if (tab === 'reports') { applyRoleUI(); initReportDates(); }
+    if (tab === 'staff' && isAdmin()) renderStaff();
+  }
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  async function loadSlips() {
+    try {
+      const q = query(slipsCollection, orderBy("date", "desc"));
+      const snapshot = await getDocs(q);
+      cloudSlips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return cloudSlips;
+    } catch (e) {
+      console.error('Could not read cloud slips', e);
+      toast('Could not load cloud history');
+      return [];
+    }
+  }
+
+  async function saveSlip() {
+    const party = document.getElementById('partyName').value.trim();
+    const dm = document.getElementById('dmNumber').value.trim();
+    const validItems = items
+      .map(r => ({ article: r.article.trim(), qty: parseFloat(r.qty) || 0, price: parseFloat(r.price) || 0 }))
+      .filter(r => r.article && r.qty > 0);
+
+    if (!party) { toast('Enter a Party Name'); return; }
+    if (validItems.length === 0) { toast('Add at least one item with qty'); return; }
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+
+    try {
+      if (editingSlipId) {
+        const old = cloudSlips.find(s => s.id === editingSlipId);
+        const updated = {
+          date: old?.date || new Date().toISOString(),
+          party,
+          dmNumber: dm,
+          items: validItems,
+          grandTotal: validItems.reduce((sum, r) => sum + r.qty * r.price, 0),
+          updatedAt: new Date().toISOString()
+        };
+        await updateDoc(doc(db, 'returnSlips', editingSlipId), updated);
+        const savedSlip = { id: editingSlipId, ...updated };
+        generatePDF(savedSlip, { download: true });
+        toast('Return slip updated');
+        editingSlipId = null;
+        saveBtn.textContent = 'Save & Generate PDF';
+      } else {
+        const slip = {
+          date: new Date().toISOString(),
+          party,
+          dmNumber: dm,
+          items: validItems,
+          grandTotal: validItems.reduce((s, r) => s + r.qty * r.price, 0)
+        };
+        const docRef = await addDoc(slipsCollection, slip);
+        const savedSlip = { id: docRef.id, ...slip };
+        generatePDF(savedSlip, { download: true });
+        toast('Return slip saved');
+      }
+
+      document.getElementById('partyName').value = '';
+      document.getElementById('dmNumber').value = '';
+      items = [];
+      addItemRow();
+      await loadSlips();
+      showTab('history');
+    } catch (e) {
+      console.error('Could not save/update slip', e);
+      toast('Could not save — check Firebase rules');
+    } finally {
+      saveBtn.disabled = false;
+    }
+  }
+
+  function editSlip(slipId) {
+    const slip = cloudSlips.find(s => s.id === slipId);
+    if (!slip) { toast('Slip not found'); return; }
+    editingSlipId = slipId;
+    document.getElementById('partyName').value = slip.party || '';
+    document.getElementById('dmNumber').value = slip.dmNumber || '';
+    items = (slip.items || []).map(r => ({ id: uid(), article: r.article || '', qty: r.qty ?? '', price: r.price ?? '' }));
+    if (!items.length) addItemRow(); else renderItems();
+    document.getElementById('saveBtn').textContent = 'Update & Generate PDF';
+    showTab('new');
+  }
+
+  function generatePDF(slip, opts) {
+    opts = opts || {};
+    const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const marginX = 5;
+    let y = 10;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('SHREE VIDYASAGRAM', pageWidth / 2, y, { align: 'center' });
+    y += 8;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('RETURN GOODS', pageWidth / 2, y, { align: 'center' });
+    y += 10;
+
+    doc.setFontSize(10);
+    const dateStr = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    doc.text(`Date: ${dateStr}`, marginX, y);
+    y += 5;
+    doc.text(`Party: ${slip.party}`, marginX, y);
+    y += 5;
+    doc.text(`DM No.: ${slip.dmNumber || '-'}`, marginX, y);
+    y += 7;
+
+    doc.setFont('helvetica', 'bold');
+    const col = { article: marginX, qty: pageWidth - 42, price: pageWidth - 22, total: pageWidth - 5 };
+    doc.text('Article', col.article, y);
+    doc.text('Qty', col.qty, y, { align: 'right' });
+    doc.text('Price', col.price, y, { align: 'right' });
+    doc.text('Total', col.total, y, { align: 'right' });
+    y += 3;
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 6;
+
+    doc.setFont('helvetica', 'normal');
+    slip.items.forEach(item => {
+      const lineTotal = item.qty * item.price;
+      doc.text(String(item.article), col.article, y);
+      doc.text(String(item.qty), col.qty, y, { align: 'right' });
+      doc.text(item.price.toFixed(2), col.price, y, { align: 'right' });
+      doc.text(lineTotal.toFixed(2), col.total, y, { align: 'right' });
+      y += 6;
+    });
+
+    y += 3;
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Grand Total', col.price, y, { align: 'right' });
+    doc.text(slip.grandTotal.toFixed(2), col.total, y, { align: 'right' });
+    y += 12;
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(11);
+    doc.text('THANK YOU', pageWidth / 2, y, { align: 'center' });
+
+    const filename = `RETURN_${slip.id}.pdf`;
+
+    // Crop the receipt to the actual content height to minimize paper wastage.
+    const finalHeight = Math.max(70, Math.min(200, y + 8));
+    const cropped = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
+    const page = doc.internal.pageSize;
+    const pdfData = doc.output('arraybuffer');
+    // Rebuild the receipt at the exact final height.
+    const receipt = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
+    let ry = 10;
+    receipt.setFont('helvetica', 'bold');
+    receipt.setFontSize(14);
+    receipt.text('SHREE VIDYASAGRAM', 40, ry, { align: 'center' });
+    ry += 8;
+    receipt.setFontSize(10);
+    receipt.setFont('helvetica', 'normal');
+    receipt.text('RETURN GOODS', 40, ry, { align: 'center' });
+    ry += 10;
+    receipt.setFontSize(9);
+    const dateStr2 = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    receipt.text(`Date: ${dateStr2}`, 5, ry); ry += 5;
+    receipt.text(`Party: ${slip.party}`, 5, ry); ry += 5;
+    receipt.text(`DM No.: ${slip.dmNumber || '-'}`, 5, ry); ry += 7;
+    receipt.setFont('helvetica', 'bold');
+    receipt.text('Article', 5, ry);
+    receipt.text('Qty', 38, ry, { align: 'right' });
+    receipt.text('Price', 58, ry, { align: 'right' });
+    receipt.text('Total', 75, ry, { align: 'right' });
+    ry += 3;
+    receipt.line(5, ry, 75, ry);
+    ry += 6;
+    receipt.setFont('helvetica', 'normal');
+    slip.items.forEach(item => {
+      const lineTotal = item.qty * item.price;
+      receipt.text(String(item.article), 5, ry);
+      receipt.text(String(item.qty), 38, ry, { align: 'right' });
+      receipt.text(item.price.toFixed(2), 58, ry, { align: 'right' });
+      receipt.text(lineTotal.toFixed(2), 75, ry, { align: 'right' });
+      ry += 6;
+    });
+    ry += 3;
+    receipt.line(5, ry, 75, ry);
+    ry += 7;
+    receipt.setFont('helvetica', 'bold');
+    receipt.text('Grand Total', 58, ry, { align: 'right' });
+    receipt.text(slip.grandTotal.toFixed(2), 75, ry, { align: 'right' });
+    ry += 12;
+    receipt.setFont('helvetica', 'italic');
+    receipt.setFontSize(10);
+    receipt.text('THANK YOU', 40, ry, { align: 'center' });
+
+    if (opts.download) receipt.save(filename);
+    return { doc: receipt, filename };
+  }
+
+  function printSlip(slip) {
+    if (!isAdmin()) { toast('Printing is admin-only'); return; }
+    const d = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const rows = slip.items.map(item => `
+      <tr>
+        <td>${escapeHtml(item.article)}</td>
+        <td>${item.qty}</td>
+        <td>${Number(item.price).toFixed(2)}</td>
+        <td>${Number(item.qty * item.price).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const printWindow = window.open('', '_blank', 'width=400,height=700');
+    if (!printWindow) {
+      toast('Allow pop-ups to print');
+      return;
+    }
+
+    printWindow.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Return Slip - ${escapeHtml(slip.party)}</title>
+<style>
+  @page { size: 80mm auto; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { width: 80mm; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; padding: 5mm; color: #000; }
+  .center { text-align: center; }
+  .brand { font-size: 16px; font-weight: 700; }
+  .title { font-size: 12px; margin-top: 4px; margin-bottom: 10px; }
+  .meta { line-height: 1.5; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th, td { padding: 4px 0; border-bottom: 1px solid #000; }
+  th { font-weight: 700; }
+  th:nth-child(1), td:nth-child(1) { width: 34%; text-align: left; word-break: break-all; }
+  th:nth-child(2), td:nth-child(2) { width: 13%; text-align: right; }
+  th:nth-child(3), td:nth-child(3) { width: 25%; text-align: right; }
+  th:nth-child(4), td:nth-child(4) { width: 28%; text-align: right; }
+  .total { display: flex; justify-content: flex-end; gap: 10px; font-weight: 700; padding-top: 8px; }
+  .thanks { text-align: center; margin-top: 16px; font-style: italic; }
+</style>
+</head>
+<body>
+  <div class="center brand">SHREE VIDYASAGRAM</div>
+  <div class="center title">RETURN GOODS</div>
+  <div class="meta">
+    Date: ${escapeHtml(d)}<br>
+    Party: ${escapeHtml(slip.party)}<br>
+    DM No.: ${escapeHtml(slip.dmNumber || '-')}
+  </div>
+  <table>
+    <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="total"><span>Grand Total</span><span>${Number(slip.grandTotal).toFixed(2)}</span></div>
+  <div class="thanks">THANK YOU</div>
+</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  }
+
+  async function sharePDF(slip) {
+    const { doc, filename } = generatePDF(slip, { download: false });
+    const blob = doc.output('blob');
+    const file = new File([blob], filename, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: `Return Slip — ${slip.party}`,
+          text: `Return goods slip for ${slip.party}, DM No. ${slip.dmNumber || '-'}`
+        });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+
+    doc.save(filename);
+    toast('Sharing not supported here — PDF downloaded instead');
+  }
+
+
+  function localDateInputValue(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function initReportDates() {
+    const from = document.getElementById('reportFrom');
+    const to = document.getElementById('reportTo');
+    if (!from.value || !to.value) {
+      const today = localDateInputValue(new Date());
+      from.value = today;
+      to.value = today;
+      showDateReport();
+    }
+  }
+
+  function getReportSlips() {
+    const from = document.getElementById('reportFrom').value;
+    const to = document.getElementById('reportTo').value;
+    if (!from || !to) {
+      toast('Select From and To dates');
+      return null;
+    }
+    if (from > to) {
+      toast('From date cannot be after To date');
+      return null;
+    }
+
+    return cloudSlips.filter(slip => {
+      const day = localDateInputValue(new Date(slip.date));
+      return day >= from && day <= to;
+    });
+  }
+
+  async function showDateReport() {
+    if (!cloudSlips.length) await loadSlips();
+    const slips = getReportSlips();
+    if (!slips) return;
+
+    const list = document.getElementById('reportList');
+    const summary = document.getElementById('reportSummary');
+
+    const totalAmount = slips.reduce((sum, s) => sum + Number(s.grandTotal || 0), 0);
+    const totalQty = slips.reduce(
+      (sum, s) => sum + (s.items || []).reduce((n, item) => n + Number(item.qty || 0), 0),
+      0
+    );
+
+    summary.innerHTML = `
+      <div style="padding:16px;">
+        <div style="font-weight:700;">${slips.length} return slip${slips.length === 1 ? '' : 's'}</div>
+        <div style="color:var(--ink-soft);font-size:0.85rem;margin-top:5px;">
+          Total Qty: ${totalQty} · Total Value: ${money(totalAmount)}
+        </div>
+      </div>
+    `;
+
+    if (!slips.length) {
+      list.innerHTML = '<div class="empty">No return slips found for this date range.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    slips.forEach(slip => {
+      const div = document.createElement('div');
+      div.className = 'slip-card';
+      const d = new Date(slip.date).toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric'
+      });
+      div.innerHTML = `
+        <div class="slip-main">
+          <div class="party">${escapeHtml(slip.party)}</div>
+          <div class="meta">DM ${escapeHtml(slip.dmNumber || '-')} · ${d}</div>
+        </div>
+        <div class="slip-amount">${money(slip.grandTotal)}</div>
+      `;
+      div.onclick = () => viewSlip(slip.id);
+      list.appendChild(div);
+    });
+  }
+
+  async function exportDateRangeExcel() {
+    if (!isAdmin()) { toast('Excel export is admin-only'); return; }
+    if (!cloudSlips.length) await loadSlips();
+    const slips = getReportSlips();
+    if (!slips) return;
+
+    if (!slips.length) {
+      toast('No data for this date range');
+      return;
+    }
+
+    const rows = [];
+    slips.forEach(slip => {
+      const date = new Date(slip.date).toLocaleDateString('en-IN', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      });
+      (slip.items || []).forEach(item => {
+        rows.push({
+          Date: date,
+          'Slip ID': slip.id,
+          'Party Name': slip.party,
+          'DM Number': slip.dmNumber || '',
+          'Article Number': item.article,
+          Qty: Number(item.qty || 0),
+          'Price/Pc': Number(item.price || 0),
+          Total: Number(item.qty || 0) * Number(item.price || 0)
+        });
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 13 }, { wch: 18 }, { wch: 24 }, { wch: 16 },
+      { wch: 18 }, { wch: 8 }, { wch: 12 }, { wch: 14 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Return Data');
+
+    const from = document.getElementById('reportFrom').value;
+    const to = document.getElementById('reportTo').value;
+    XLSX.writeFile(workbook, `RETURN_REPORT_${from}_TO_${to}.xlsx`);
+    toast('Excel downloaded');
+  }
+
+  async function renderHistory() {
+    const list = document.getElementById('historyList');
+    list.innerHTML = '<div class="empty">Loading cloud history...</div>';
+    const slips = await loadSlips();
+
+    if (slips.length === 0) {
+      list.innerHTML = '<div class="empty">No return slips yet.<br>Create one from the New Return tab.</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    slips.forEach(slip => {
+      const div = document.createElement('div');
+      div.className = 'slip-card';
+      const d = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      div.innerHTML = `
+        <div class="slip-main">
+          <div class="party">${escapeHtml(slip.party)}</div>
+          <div class="meta">DM ${escapeHtml(slip.dmNumber || '-')} · ${d}</div>
+        </div>
+        <div class="slip-amount">${money(slip.grandTotal)}</div>
+      `;
+      div.onclick = () => viewSlip(slip.id);
+      list.appendChild(div);
+    });
+  }
+
+  async function viewSlip(id) {
+    const slips = cloudSlips.length ? cloudSlips : await loadSlips();
+    const slip = slips.find(s => s.id === id);
+    if (!slip) return;
+    const d = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const rows = slip.items.map(item => `
+      <tr>
+        <td>${escapeHtml(item.article)}</td>
+        <td>${item.qty}</td>
+        <td>${money(item.price)}</td>
+        <td>${money(item.qty * item.price)}</td>
+      </tr>
+    `).join('');
+
+    document.getElementById('detailCard').innerHTML = `
+      <div style="font-weight:700; font-size:1.05rem;">${escapeHtml(slip.party)}</div>
+      <div style="color:var(--ink-soft); font-size:0.85rem; margin-top:4px;">DM No. ${escapeHtml(slip.dmNumber || '-')} · ${d}</div>
+      <table class="detail-table">
+        <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="grand-total"><span>Grand Total</span><span>${money(slip.grandTotal)}</span></div>
+      <div class="action-row">
+        <button class="btn-outline" id="editDetailBtn">✏️ Edit</button>
+        <button class="btn-outline" id="downloadDetailBtn">Download PDF</button>
+        <button class="btn-outline" id="printDetailBtn" style="display:${isAdmin() ? 'block' : 'none'}">🖨️ Print</button>
+        <button class="btn-fill" id="shareDetailBtn">📤 Share</button>
+        <button class="btn-outline" id="deleteDetailBtn" style="display:${isAdmin() ? 'block' : 'none'};border-color:#b42318;color:#b42318;">🗑️ Delete</button>
+      </div>
+    `;
+
+    document.getElementById('editDetailBtn').onclick = () => editSlip(slip.id);
+    document.getElementById('downloadDetailBtn').onclick = () => generatePDF(slip, {download:true});
+    document.getElementById('printDetailBtn').onclick = () => printSlip(slip);
+    document.getElementById('shareDetailBtn').onclick = () => sharePDF(slip);
+    document.getElementById('deleteDetailBtn').onclick = () => deleteSlip(slip.id);
+
+    showTab('detail');
+  }
+
+  // Keep the existing inline HTML buttons working with the module script.
+  window.addItemRow = addItemRow;
+  window.removeItemRow = removeItemRow;
+  window.updateItem = updateItem;
+  window.showTab = showTab;
+  window.saveSlip = saveSlip;
+  window.sharePDF = sharePDF;
+  window.printSlip = printSlip;
+  window.showDateReport = showDateReport;
+  window.exportDateRangeExcel = exportDateRangeExcel;
+  window.generatePDF = generatePDF;
+  window.viewSlip = viewSlip;
+  window.login = login;
+  window.editSlip = editSlip;
+  window.logout = logout;
+  window.addStaff = addStaff;
+  window.toggleStaff = toggleStaff;
+  window.deleteSlip = deleteSlip;
+
+  addItemRow();
+</script>
+</body>
+</html>
