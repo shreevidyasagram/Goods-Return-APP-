@@ -103,6 +103,19 @@
     margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line);
     font-size: 1.05rem; font-weight: 700;
   }
+  .calc-box {
+    margin-top: 14px; padding: 14px; background: #faf9f5;
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .calc-title { font-size: .88rem; font-weight: 700; margin-bottom: 12px; }
+  .calc-box .field { margin-bottom: 10px; }
+  .calc-summary { border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 8px; }
+  .calc-summary > div {
+    display:flex; justify-content:space-between; gap:12px;
+    padding: 4px 0; font-size:.84rem;
+  }
+  .calc-summary strong { font-variant-numeric: tabular-nums; }
+
   .grand-total span:last-child { font-variant-numeric: tabular-nums; }
   .primary-btn {
     width: 100%; padding: 13px; border: none; border-radius: 8px;
@@ -201,6 +214,71 @@
       </div>
       <div id="itemsContainer"></div>
       <button class="add-item" onclick="addItemRow()">+ Add item</button>
+
+      <div class="calc-box">
+        <div class="calc-title">Adjustments &amp; GST</div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="lessType">Less</label>
+            <select id="lessType" onchange="updateGrandTotal()">
+              <option value="none">No Less</option>
+              <option value="percent">Less %</option>
+              <option value="amount">Less ₹</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="lessValue">Less Value</label>
+            <input id="lessValue" type="number" min="0" step="0.01" placeholder="0" oninput="updateGrandTotal()">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="addType">Add</label>
+            <select id="addType" onchange="updateGrandTotal()">
+              <option value="none">No Add</option>
+              <option value="percent">Add %</option>
+              <option value="amount">Add ₹</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="addValue">Add Value</label>
+            <input id="addValue" type="number" min="0" step="0.01" placeholder="0" oninput="updateGrandTotal()">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="gstRate">GST</label>
+            <select id="gstRate" onchange="updateGrandTotal()">
+              <option value="0">No GST</option>
+              <option value="5">5%</option>
+              <option value="12">12%</option>
+              <option value="18">18%</option>
+              <option value="28">28%</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="gstType">GST Type</label>
+            <select id="gstType" onchange="updateGrandTotal()">
+              <option value="cgst_sgst">CGST + SGST</option>
+              <option value="igst">IGST</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="calc-summary">
+          <div><span>Item Total</span><strong id="calcItemTotal">₹0.00</strong></div>
+          <div id="lessSummary" style="display:none;"><span>Less</span><strong id="calcLess">- ₹0.00</strong></div>
+          <div id="addSummary" style="display:none;"><span>Add</span><strong id="calcAdd">+ ₹0.00</strong></div>
+          <div><span>Taxable Amount</span><strong id="calcTaxable">₹0.00</strong></div>
+          <div id="cgstSummary" style="display:none;"><span>CGST</span><strong id="calcCgst">₹0.00</strong></div>
+          <div id="sgstSummary" style="display:none;"><span>SGST</span><strong id="calcSgst">₹0.00</strong></div>
+          <div id="igstSummary" style="display:none;"><span>IGST</span><strong id="calcIgst">₹0.00</strong></div>
+        </div>
+      </div>
+
       <div class="grand-total"><span>Grand Total</span><span id="grandTotal">₹0.00</span></div>
       <button class="primary-btn" id="saveBtn" onclick="saveSlip()">Save &amp; Generate PDF</button>
     </div>
@@ -534,9 +612,78 @@
     }
   }
 
+  function getCalculation() {
+    const itemTotal = items.reduce((sum, r) =>
+      sum + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
+
+    const lessType = document.getElementById('lessType')?.value || 'none';
+    const lessValue = parseFloat(document.getElementById('lessValue')?.value) || 0;
+    const addType = document.getElementById('addType')?.value || 'none';
+    const addValue = parseFloat(document.getElementById('addValue')?.value) || 0;
+    const gstRate = parseFloat(document.getElementById('gstRate')?.value) || 0;
+    const gstType = document.getElementById('gstType')?.value || 'cgst_sgst';
+
+    const lessAmount = lessType === 'percent'
+      ? itemTotal * lessValue / 100
+      : lessType === 'amount' ? lessValue : 0;
+
+    const afterLess = Math.max(0, itemTotal - lessAmount);
+
+    const addAmount = addType === 'percent'
+      ? afterLess * addValue / 100
+      : addType === 'amount' ? addValue : 0;
+
+    const taxableAmount = Math.max(0, afterLess + addAmount);
+    const gstAmount = taxableAmount * gstRate / 100;
+
+    return {
+      itemTotal,
+      lessType,
+      lessValue,
+      lessAmount,
+      addType,
+      addValue,
+      addAmount,
+      taxableAmount,
+      gstRate,
+      gstType,
+      cgst: gstType === 'cgst_sgst' ? gstAmount / 2 : 0,
+      sgst: gstType === 'cgst_sgst' ? gstAmount / 2 : 0,
+      igst: gstType === 'igst' ? gstAmount : 0,
+      gstAmount,
+      grandTotal: taxableAmount + gstAmount
+    };
+  }
+
+  function setCalcInputs(calc) {
+    document.getElementById('lessType').value = calc?.lessType || 'none';
+    document.getElementById('lessValue').value = calc?.lessValue ?? '';
+    document.getElementById('addType').value = calc?.addType || 'none';
+    document.getElementById('addValue').value = calc?.addValue ?? '';
+    document.getElementById('gstRate').value = String(calc?.gstRate ?? 0);
+    document.getElementById('gstType').value = calc?.gstType || 'cgst_sgst';
+    updateGrandTotal();
+  }
+
   function updateGrandTotal() {
-    const total = items.reduce((sum, r) => sum + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
-    document.getElementById('grandTotal').textContent = money(total);
+    const c = getCalculation();
+
+    document.getElementById('calcItemTotal').textContent = money(c.itemTotal);
+    document.getElementById('calcLess').textContent = '- ' + money(c.lessAmount);
+    document.getElementById('calcAdd').textContent = '+ ' + money(c.addAmount);
+    document.getElementById('calcTaxable').textContent = money(c.taxableAmount);
+    document.getElementById('calcCgst').textContent = money(c.cgst);
+    document.getElementById('calcSgst').textContent = money(c.sgst);
+    document.getElementById('calcIgst').textContent = money(c.igst);
+
+    document.getElementById('lessSummary').style.display = c.lessAmount > 0 ? 'flex' : 'none';
+    document.getElementById('addSummary').style.display = c.addAmount > 0 ? 'flex' : 'none';
+    document.getElementById('cgstSummary').style.display = c.gstAmount > 0 && c.gstType === 'cgst_sgst' ? 'flex' : 'none';
+    document.getElementById('sgstSummary').style.display = c.gstAmount > 0 && c.gstType === 'cgst_sgst' ? 'flex' : 'none';
+    document.getElementById('igstSummary').style.display = c.gstAmount > 0 && c.gstType === 'igst' ? 'flex' : 'none';
+
+    document.getElementById('grandTotal').textContent = money(c.grandTotal);
+    return c;
   }
 
   function escapeHtml(s) {
@@ -601,7 +748,7 @@
           party,
           dmNumber: dm,
           items: validItems,
-          grandTotal: validItems.reduce((sum, r) => sum + r.qty * r.price, 0),
+          ...getCalculation(),
           updatedAt: new Date().toISOString()
         };
         await updateDoc(doc(db, 'returnSlips', editingSlipId), updated);
@@ -616,7 +763,7 @@
           party,
           dmNumber: dm,
           items: validItems,
-          grandTotal: validItems.reduce((s, r) => s + r.qty * r.price, 0)
+          ...getCalculation()
         };
         const docRef = await addDoc(slipsCollection, slip);
         const savedSlip = { id: docRef.id, ...slip };
@@ -627,6 +774,12 @@
       document.getElementById('partyName').value = '';
       document.getElementById('dmNumber').value = '';
       items = [];
+      document.getElementById('lessType').value = 'none';
+      document.getElementById('lessValue').value = '';
+      document.getElementById('addType').value = 'none';
+      document.getElementById('addValue').value = '';
+      document.getElementById('gstRate').value = '0';
+      document.getElementById('gstType').value = 'cgst_sgst';
       addItemRow();
       await loadSlips();
       showTab('history');
@@ -645,6 +798,7 @@
     document.getElementById('partyName').value = slip.party || '';
     document.getElementById('dmNumber').value = slip.dmNumber || '';
     items = (slip.items || []).map(r => ({ id: uid(), article: r.article || '', qty: r.qty ?? '', price: r.price ?? '' }));
+    setCalcInputs(slip);
     if (!items.length) addItemRow(); else renderItems();
     document.getElementById('saveBtn').textContent = 'Update & Generate PDF';
     showTab('new');
@@ -652,118 +806,129 @@
 
   function generatePDF(slip, opts) {
     opts = opts || {};
-    const doc = new jsPDF({ unit: 'mm', format: [80, 200] });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const marginX = 5;
-    let y = 10;
+    const c = {
+      itemTotal: Number(slip.itemTotal ?? (slip.items || []).reduce((s, r) => s + r.qty * r.price, 0)),
+      lessAmount: Number(slip.lessAmount || 0),
+      addAmount: Number(slip.addAmount || 0),
+      taxableAmount: Number(slip.taxableAmount ?? slip.grandTotal ?? 0),
+      gstRate: Number(slip.gstRate || 0),
+      gstType: slip.gstType || 'cgst_sgst',
+      cgst: Number(slip.cgst || 0),
+      sgst: Number(slip.sgst || 0),
+      igst: Number(slip.igst || 0),
+      gstAmount: Number(slip.gstAmount || 0),
+      grandTotal: Number(slip.grandTotal || 0)
+    };
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('SHREE VIDYASAGRAM', pageWidth / 2, y, { align: 'center' });
-    y += 8;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('RETURN GOODS', pageWidth / 2, y, { align: 'center' });
-    y += 10;
+    const rows = (slip.items || []).map(item => ({
+      ...item,
+      lineTotal: Number(item.qty) * Number(item.price)
+    }));
 
-    doc.setFontSize(10);
-    const dateStr = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    doc.text(`Date: ${dateStr}`, marginX, y);
-    y += 5;
-    doc.text(`Party: ${slip.party}`, marginX, y);
-    y += 5;
-    doc.text(`DM No.: ${slip.dmNumber || '-'}`, marginX, y);
+    // Estimate a receipt height based on item count and adjustment rows.
+    const summaryRows = 3 + (c.lessAmount > 0 ? 1 : 0) + (c.addAmount > 0 ? 1 : 0)
+      + (c.gstAmount > 0 ? (c.gstType === 'igst' ? 1 : 2) : 0);
+    const finalHeight = Math.max(70, Math.min(260, 75 + rows.length * 6 + summaryRows * 5));
+
+    const receipt = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
+    const pageWidth = 80;
+    let y = 9;
+
+    receipt.setFont('helvetica', 'bold');
+    receipt.setFontSize(14);
+    receipt.text('SHREE VIDYASAGRAM', pageWidth / 2, y, { align: 'center' });
     y += 7;
+    receipt.setFontSize(10);
+    receipt.setFont('helvetica', 'normal');
+    receipt.text('RETURN GOODS', pageWidth / 2, y, { align: 'center' });
+    y += 5;
+    receipt.setFontSize(8);
+    receipt.text('GSTIN: 27ACXFS0440D1Z1', pageWidth / 2, y, { align: 'center' });
+    y += 8;
 
-    doc.setFont('helvetica', 'bold');
-    const col = { article: marginX, qty: pageWidth - 42, price: pageWidth - 22, total: pageWidth - 5 };
-    doc.text('Article', col.article, y);
-    doc.text('Qty', col.qty, y, { align: 'right' });
-    doc.text('Price', col.price, y, { align: 'right' });
-    doc.text('Total', col.total, y, { align: 'right' });
+    receipt.setFontSize(9);
+    const dateStr = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    receipt.text(`Date: ${dateStr}`, 5, y); y += 5;
+    receipt.text(`Party: ${slip.party}`, 5, y); y += 5;
+    receipt.text(`DM No.: ${slip.dmNumber || '-'}`, 5, y); y += 7;
+
+    receipt.setFont('helvetica', 'bold');
+    receipt.text('Article', 5, y);
+    receipt.text('Qty', 38, y, { align: 'right' });
+    receipt.text('Price', 58, y, { align: 'right' });
+    receipt.text('Total', 75, y, { align: 'right' });
     y += 3;
-    doc.line(marginX, y, pageWidth - marginX, y);
+    receipt.line(5, y, 75, y);
     y += 6;
 
-    doc.setFont('helvetica', 'normal');
-    slip.items.forEach(item => {
-      const lineTotal = item.qty * item.price;
-      doc.text(String(item.article), col.article, y);
-      doc.text(String(item.qty), col.qty, y, { align: 'right' });
-      doc.text(item.price.toFixed(2), col.price, y, { align: 'right' });
-      doc.text(lineTotal.toFixed(2), col.total, y, { align: 'right' });
+    receipt.setFont('helvetica', 'normal');
+    rows.forEach(item => {
+      receipt.text(String(item.article), 5, y);
+      receipt.text(String(item.qty), 38, y, { align: 'right' });
+      receipt.text(Number(item.price).toFixed(2), 58, y, { align: 'right' });
+      receipt.text(item.lineTotal.toFixed(2), 75, y, { align: 'right' });
       y += 6;
     });
 
-    y += 3;
-    doc.line(marginX, y, pageWidth - marginX, y);
-    y += 7;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Grand Total', col.price, y, { align: 'right' });
-    doc.text(slip.grandTotal.toFixed(2), col.total, y, { align: 'right' });
-    y += 12;
+    y += 2;
+    receipt.line(5, y, 75, y);
+    y += 6;
 
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(11);
-    doc.text('THANK YOU', pageWidth / 2, y, { align: 'center' });
+    const summary = (label, value, bold = false) => {
+      receipt.setFont('helvetica', bold ? 'bold' : 'normal');
+      receipt.setFontSize(bold ? 9.5 : 8.5);
+      receipt.text(label, 58, y, { align: 'right' });
+      receipt.text(Number(value).toFixed(2), 75, y, { align: 'right' });
+      y += 5;
+    };
 
-    const filename = `RETURN_${slip.id}.pdf`;
+    summary('Item Total', c.itemTotal);
+    if (c.lessAmount > 0) summary('Less', -c.lessAmount);
+    if (c.addAmount > 0) summary('Add', c.addAmount);
+    summary('Taxable', c.taxableAmount);
 
-    // Crop the receipt to the actual content height to minimize paper wastage.
-    const finalHeight = Math.max(70, Math.min(200, y + 8));
-    const cropped = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
-    const page = doc.internal.pageSize;
-    const pdfData = doc.output('arraybuffer');
-    // Rebuild the receipt at the exact final height.
-    const receipt = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
-    let ry = 10;
+    if (c.gstAmount > 0) {
+      if (c.gstType === 'igst') {
+        summary(`IGST ${c.gstRate}%`, c.igst);
+      } else {
+        summary(`CGST ${c.gstRate / 2}%`, c.cgst);
+        summary(`SGST ${c.gstRate / 2}%`, c.sgst);
+      }
+    }
+
+    y += 1;
     receipt.setFont('helvetica', 'bold');
-    receipt.setFontSize(14);
-    receipt.text('SHREE VIDYASAGRAM', 40, ry, { align: 'center' });
-    ry += 8;
     receipt.setFontSize(10);
-    receipt.setFont('helvetica', 'normal');
-    receipt.text('RETURN GOODS', 40, ry, { align: 'center' });
-    ry += 10;
-    receipt.setFontSize(9);
-    const dateStr2 = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    receipt.text(`Date: ${dateStr2}`, 5, ry); ry += 5;
-    receipt.text(`Party: ${slip.party}`, 5, ry); ry += 5;
-    receipt.text(`DM No.: ${slip.dmNumber || '-'}`, 5, ry); ry += 7;
-    receipt.setFont('helvetica', 'bold');
-    receipt.text('Article', 5, ry);
-    receipt.text('Qty', 38, ry, { align: 'right' });
-    receipt.text('Price', 58, ry, { align: 'right' });
-    receipt.text('Total', 75, ry, { align: 'right' });
-    ry += 3;
-    receipt.line(5, ry, 75, ry);
-    ry += 6;
-    receipt.setFont('helvetica', 'normal');
-    slip.items.forEach(item => {
-      const lineTotal = item.qty * item.price;
-      receipt.text(String(item.article), 5, ry);
-      receipt.text(String(item.qty), 38, ry, { align: 'right' });
-      receipt.text(item.price.toFixed(2), 58, ry, { align: 'right' });
-      receipt.text(lineTotal.toFixed(2), 75, ry, { align: 'right' });
-      ry += 6;
-    });
-    ry += 3;
-    receipt.line(5, ry, 75, ry);
-    ry += 7;
-    receipt.setFont('helvetica', 'bold');
-    receipt.text('Grand Total', 58, ry, { align: 'right' });
-    receipt.text(slip.grandTotal.toFixed(2), 75, ry, { align: 'right' });
-    ry += 12;
+    receipt.text('Grand Total', 58, y, { align: 'right' });
+    receipt.text(c.grandTotal.toFixed(2), 75, y, { align: 'right' });
+    y += 10;
+
     receipt.setFont('helvetica', 'italic');
     receipt.setFontSize(10);
-    receipt.text('THANK YOU', 40, ry, { align: 'center' });
+    receipt.text('THANK YOU', pageWidth / 2, y, { align: 'center' });
 
+    const filename = `RETURN_${slip.id}.pdf`;
     if (opts.download) receipt.save(filename);
     return { doc: receipt, filename };
   }
 
   function printSlip(slip) {
     if (!isAdmin()) { toast('Printing is admin-only'); return; }
+
+    const c = {
+      itemTotal: Number(slip.itemTotal ?? (slip.items || []).reduce((s, r) => s + r.qty * r.price, 0)),
+      lessAmount: Number(slip.lessAmount || 0),
+      addAmount: Number(slip.addAmount || 0),
+      taxableAmount: Number(slip.taxableAmount ?? slip.grandTotal ?? 0),
+      gstRate: Number(slip.gstRate || 0),
+      gstType: slip.gstType || 'cgst_sgst',
+      cgst: Number(slip.cgst || 0),
+      sgst: Number(slip.sgst || 0),
+      igst: Number(slip.igst || 0),
+      gstAmount: Number(slip.gstAmount || 0),
+      grandTotal: Number(slip.grandTotal || 0)
+    };
+
     const d = new Date(slip.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const rows = slip.items.map(item => `
       <tr>
@@ -774,11 +939,21 @@
       </tr>
     `).join('');
 
+    const adjustmentRows = `
+      <div class="calc"><span>Item Total</span><span>${c.itemTotal.toFixed(2)}</span></div>
+      ${c.lessAmount > 0 ? `<div class="calc"><span>Less</span><span>- ${c.lessAmount.toFixed(2)}</span></div>` : ''}
+      ${c.addAmount > 0 ? `<div class="calc"><span>Add</span><span>+ ${c.addAmount.toFixed(2)}</span></div>` : ''}
+      <div class="calc"><span>Taxable Amount</span><span>${c.taxableAmount.toFixed(2)}</span></div>
+      ${c.gstAmount > 0 && c.gstType === 'igst'
+        ? `<div class="calc"><span>IGST ${c.gstRate}%</span><span>${c.igst.toFixed(2)}</span></div>`
+        : c.gstAmount > 0
+          ? `<div class="calc"><span>CGST ${c.gstRate / 2}%</span><span>${c.cgst.toFixed(2)}</span></div>
+             <div class="calc"><span>SGST ${c.gstRate / 2}%</span><span>${c.sgst.toFixed(2)}</span></div>`
+          : ''}
+    `;
+
     const printWindow = window.open('', '_blank', 'width=400,height=700');
-    if (!printWindow) {
-      toast('Allow pop-ups to print');
-      return;
-    }
+    if (!printWindow) { toast('Allow pop-ups to print'); return; }
 
     printWindow.document.write(`<!doctype html>
 <html>
@@ -801,13 +976,14 @@
   th:nth-child(2), td:nth-child(2) { width: 13%; text-align: right; }
   th:nth-child(3), td:nth-child(3) { width: 25%; text-align: right; }
   th:nth-child(4), td:nth-child(4) { width: 28%; text-align: right; }
-  .total { display: flex; justify-content: flex-end; gap: 10px; font-weight: 700; padding-top: 8px; }
+  .calc { display: flex; justify-content: space-between; padding-top: 4px; }
+  .total { display: flex; justify-content: flex-end; gap: 10px; font-weight: 700; padding-top: 8px; border-top: 1px solid #000; margin-top: 5px; }
   .thanks { text-align: center; margin-top: 16px; font-style: italic; }
 </style>
 </head>
 <body>
   <div class="center brand">SHREE VIDYASAGRAM</div>
-  <div class="center title">RETURN GOODS</div>
+  <div class="center title">RETURN GOODS<br><span style="font-size:9px;">GSTIN: 27ACXFS0440D1Z1</span></div>
   <div class="meta">
     Date: ${escapeHtml(d)}<br>
     Party: ${escapeHtml(slip.party)}<br>
@@ -817,16 +993,14 @@
     <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="total"><span>Grand Total</span><span>${Number(slip.grandTotal).toFixed(2)}</span></div>
+  ${adjustmentRows}
+  <div class="total"><span>Grand Total</span><span>${c.grandTotal.toFixed(2)}</span></div>
   <div class="thanks">THANK YOU</div>
 </body>
 </html>`);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
   }
 
   async function sharePDF(slip) {
@@ -960,7 +1134,18 @@
           'Article Number': item.article,
           Qty: Number(item.qty || 0),
           'Price/Pc': Number(item.price || 0),
-          Total: Number(item.qty || 0) * Number(item.price || 0)
+          Total: Number(item.qty || 0) * Number(item.price || 0),
+          'Item Total': Number(slip.itemTotal || 0),
+          'Less': Number(slip.lessAmount || 0),
+          'Add': Number(slip.addAmount || 0),
+          'Taxable Amount': Number(slip.taxableAmount || 0),
+          'GST Rate': Number(slip.gstRate || 0),
+          'GST Type': slip.gstType || '',
+          CGST: Number(slip.cgst || 0),
+          SGST: Number(slip.sgst || 0),
+          IGST: Number(slip.igst || 0),
+          'GST Amount': Number(slip.gstAmount || 0),
+          'Grand Total': Number(slip.grandTotal || 0)
         });
       });
     });
@@ -968,7 +1153,9 @@
     const worksheet = XLSX.utils.json_to_sheet(rows);
     worksheet['!cols'] = [
       { wch: 13 }, { wch: 18 }, { wch: 24 }, { wch: 16 },
-      { wch: 18 }, { wch: 8 }, { wch: 12 }, { wch: 14 }
+      { wch: 18 }, { wch: 8 }, { wch: 12 }, { wch: 14 },
+      { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 10 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -1029,6 +1216,18 @@
         <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
+      <div style="margin-top:12px;font-size:.88rem;">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Item Total</span><strong>${money(slip.itemTotal ?? slip.grandTotal)}</strong></div>
+        ${Number(slip.lessAmount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Less</span><strong>- ${money(slip.lessAmount)}</strong></div>` : ''}
+        ${Number(slip.addAmount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Add</span><strong>+ ${money(slip.addAmount)}</strong></div>` : ''}
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Taxable Amount</span><strong>${money(slip.taxableAmount ?? slip.grandTotal)}</strong></div>
+        ${Number(slip.gstAmount || 0) > 0 && (slip.gstType || 'cgst_sgst') === 'igst'
+          ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>IGST ${Number(slip.gstRate || 0)}%</span><strong>${money(slip.igst)}</strong></div>`
+          : Number(slip.gstAmount || 0) > 0
+            ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>CGST ${Number(slip.gstRate || 0)/2}%</span><strong>${money(slip.cgst)}</strong></div>
+               <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>SGST ${Number(slip.gstRate || 0)/2}%</span><strong>${money(slip.sgst)}</strong></div>`
+            : ''}
+      </div>
       <div class="grand-total"><span>Grand Total</span><span>${money(slip.grandTotal)}</span></div>
       <div class="action-row">
         <button class="btn-outline" id="editDetailBtn">✏️ Edit</button>
