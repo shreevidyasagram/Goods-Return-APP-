@@ -152,6 +152,14 @@
   .storage-note {
     font-size: 0.72rem; color: var(--ink-soft); text-align: center; margin-top: 18px; line-height: 1.5;
   }
+
+  #partySuggestions{}
+  .party-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;}
+  .party-stat{padding:12px;border:1px solid var(--line);border-radius:10px;background:#fafafa;}
+  .party-stat span{display:block;color:var(--ink-soft);font-size:.76rem;}
+  .party-stat strong{display:block;margin-top:4px;font-size:1rem;}
+  .party-report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  @media(min-width:700px){.party-stat-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
 </style>
 </head>
 <body>
@@ -187,6 +195,7 @@
 <nav>
   <button id="tab-new" class="active" onclick="showTab('new')">New Return</button>
   <button id="tab-history" onclick="showTab('history')">History</button>
+  <button id="tab-parties" onclick="showTab('parties')">Parties</button>
   <button id="tab-reports" onclick="showTab('reports')">Reports</button>
   <button id="tab-staff" style="display:none" onclick="showTab('staff')">Staff</button>
 </nav>
@@ -199,7 +208,8 @@
       <div class="row2">
         <div class="field">
           <label for="partyName">Party Name</label>
-          <input id="partyName" type="text" placeholder="e.g. Naman Enterprise">
+          <input id="partyName" type="text" list="partySuggestions" autocomplete="off" placeholder="e.g. Naman Enterprise">
+          <datalist id="partySuggestions"></datalist>
         </div>
         <div class="field">
           <label for="dmNumber">DM Number</label>
@@ -214,6 +224,11 @@
       </div>
       <div id="itemsContainer"></div>
       <button class="add-item" onclick="addItemRow()">+ Add item</button>
+
+      <div class="field" style="margin-top:14px;">
+        <label for="remarks">Remarks</label>
+        <textarea id="remarks" rows="2" placeholder="Optional remarks" style="width:100%;resize:vertical;"></textarea>
+      </div>
 
       <div class="calc-box">
         <div class="calc-title">Adjustments &amp; GST</div>
@@ -270,6 +285,7 @@
 
         <div class="calc-summary">
           <div><span>Item Total</span><strong id="calcItemTotal">₹0.00</strong></div>
+          <div><span>Total Qty</span><strong id="calcTotalQty">0 pcs</strong></div>
           <div id="lessSummary" style="display:none;"><span>Less</span><strong id="calcLess">- ₹0.00</strong></div>
           <div id="addSummary" style="display:none;"><span>Add</span><strong id="calcAdd">+ ₹0.00</strong></div>
           <div><span>Taxable Amount</span><strong id="calcTaxable">₹0.00</strong></div>
@@ -289,6 +305,18 @@
     <div class="card" style="padding:0" id="historyList"></div>
   </section>
 
+
+  <!-- PARTIES -->
+  <section id="view-parties" style="display:none">
+    <div class="card">
+      <div class="field">
+        <label for="partySearch">Search Party</label>
+        <input id="partySearch" type="text" placeholder="Type party name..." oninput="renderParties()">
+      </div>
+    </div>
+    <div class="card" style="padding:0" id="partyList"></div>
+    <div class="card" id="partyReportCard" style="display:none"></div>
+  </section>
 
   <!-- REPORTS -->
   <section id="view-reports" style="display:none">
@@ -394,6 +422,32 @@
   let currentUser = null;
   let currentRole = null;
   let editingSlipId = null;
+
+  const PRELOADED_PARTIES = ["9 THREAD APPARELS PRIVATE LIMITED","A K GARMENT","A.C.","A.M LIBAS","A.M.","A.M.MUMBAI","A.R.DRESS CODE","A.R.TRADERS","A.RITESH ENTARPRISES","A.V.CLOTHING","A.V.TEXTILS","A/C/MUMBAI","AABHINANDAN HOSIERY","AADESH MALAIYYA","AADI GARMENTS","AASTHA ENTERPRISES","AAVANI SALES","ABHIJIT","ABHINANDAN HOSIERY","ACHARY SHREE VIDYASAGAR WF","ADINATH COLLECTION","ADITECH SYSTEMS LIMITED","ADITYA COLLECTION","ADITYA SHIRTS PVT LTD","ADTECH SYSTEM","AKSHAR APPAREL'S","ALFIZA GARMENT MUMBAI","ALL INDIA EDUCATION RESEARCH ACADEMY","AMBIKA MUMBAI","AMIT AGENCY","AMIT ENTERPRISES","AMOR CLOTHING","AMS","AMSTEAD FASHION","ANGEL BOUTIQUE MUMBAI","ANIL COLLECTION","ANIL INTERNATIONAL","ANIRUDH COLLECTION","ANKITA APPAREL","ANMOL GARAMENTS","ANNA FASHION MUMBAI","ANSHUL MARKETING","ANUSHREE ENTERPRISES","APSARA SALES","APSARA TEXTILES","ARHAM APPAREL","ARHAM CLOTHING CO","ARHAM ENTERPRISES","ARIHANT APPRELS","ARIHANT GARMENTS","ARISTIDE CLOTHING","ARPIT TRADERS","ARY HOSIERY PRODUCTS","ARYAN SELSH","ASHAPURA COLLECTION","ASHISH BROTHERS","ASTHA ENTERPRISES","ATTARI COLLETION","AYESHA GARMENT","B.B.COMPANY","B.G.MUMBAI","B.H.R. FABRICS","BAAL GANESH TRADERS","BABA GOBINDRAM COLLECTION","BAISAKHIYA GARMENTS","BAL GANESH TREDARS","BALAJI APPARELS","BALAJI BAG","BALAJI COLLETAION","BALAJI ENTERPRISES","BALAJI FABRICS","BALAJI MERKETING","BASIC STUDIO MUMBAI","BHAGAT COVER COLLECTION","BHAGAT GARMENTS","BHAGWAN HOSHIERY","BHARAT GARMENTS","BHAVESH CRETION","BHAVNA TRADERS","BHAWANA MOBILE ELECTRICALS","BHIMNATH APPAREL","BHUVANOHI ENTERPRISES","BHUVANSHI ENTERPRISES","BIG BOSS","BIG BOSS MUMBAI","BLUE LADY INTERATIONAL","BLUE STITCH FASHION LLP A/C MENS","BLUOLIVES LIFESTYLE LLP","BOBBY ENTRPRISES","BOMBAY COLLECTIONS","BOMBAY ENTERPRISES","BOTTOMS LINE","BOTTOMS MORE","BUSINESS ORIENTED SOLUTIONS","C.D COLLECTION","C.D.S FASHION MUMBAI","C.M.COLLECTION.MUMBAI","CAPTURE CLOTHING","CHEEKY MUMBAI","CHOKO MOKO MUMBAI","CIA GIRISH MUNDALADA $CO","COLORS INDIA","COLOUR POPS","COOL & COOL","COTTON LINE MUMBAI","COTTON LINE SHIRTS LLP","COVER COLLECTION","D.RAJESH & CO.","DABE HOSIERYA","DC ENGINEERING","DELHI GH AGENCY","DELTA MUMBAI","DESAI TEXTILES","DESH DEVI APPARELS","DHANSHREE TRADERS","DHARMA CRIETION","DHAVAL CREATION","DHRUVI APPARELS","DILIP ENTERPRISES","DIVANJI","DOLLY ENTERPRISES","ECO FRIENDLY RESOURCES PVT LTD.","EIGHTEE CLUB","EMILY DESIGNER STUDIO","EMILY MUMBAI","ESKAY TRADELINKS","EXTRY","F.C.MUMBAI","FAMOUS GARMET","FASHION COUTURE","FLAMINGO DESGNS STUDIO","FORM CLOSING","FRIEND CHOICE","FUTURE FASHION","G.H.ENTERPRISES","G.N.G MEOW MUMBAI","G.N.MARKETING","GALAXY INTERNATIONAL","GAURAV CLOTHING COMPANY","GEETA GARMENTS","GH ENTERPRISES INC","GIRISH MUDADA","GIRISH N MUNDADA COMPANY","GIRNAR COLLECTION","GLOBAL  CLOTHING CO","GLOBAL CREATION","GOBINDRAM NOTANDAS","GOOD","GOOD LUCK GARMENT","GOOD LUCK TREADING","GOODLUCK KIDS WORLD","GURMUKH ENTERPRISES","GURU AMARDAS COLLETION","GURU GOBIND SINGH DISTRIBUTORS","GURU GOBIND SINGH GARMENTS","GURU GOBIND SINGH MISTRIBUTORS","GURU KRUPA COLLEATION","GURUGOVIND SING MARKETING","GURUNANAK TRADERS","H.C.COLLECTION","H.D.COLLECTION","H.Q.MUMBAI","H.V.APPARELS","H.V.CLOTHING","HAQ","HAQ CREATION","HARJASH COLLECTION","HARSH GARMENTS","HEAD QUARTER","HETSAM CLOTHING PRIVATE LTD","HILITE MUMBAI","HIRA GARMENTS","HOLY FAITH","HONESTY MUMBAI","HS CREATION","HUKUMATMAL VARANDMAL","ICONIC FASHION MUMBAI","IMLIY GARMENT MUMBAI","IN PLUS CLOTHING.COM","INDIA FASHION-HOUSE","ISHA ENTERPRISES","IT'S MUMBAI","J P TRADERS","J.D.","J.K CLOTHING PVT L.T.D","J.M.CRETION","J.S.CLOTHING","JAHAGIR COAT","JAI BABERI CLOTHING LLP","JAI BHARAT NX","JAI GANESH HANDLOOM HAVELI","JAI MAHAKALI ENTERPRISES","JAIN HOJRI","JAIN SALS","JAIN TRADERS","JAINAM COLLECTION","JAINAWIN COLLECTION","JAINI ENTERPRISES","JAIPUR GH AGENCY","JANANI MUMBAI","JANNAT COLLECTION MUMBAI","JAYAN SELS","JP","K.C.","K.S MUMBAI","K.SONS DISTRIBUTORS","KAKAJI BAG","KALYANLAKSHMI APPARELS PVT. LTD","KARAM ENTERPRICES","KARAN NX","KAREENA CLOTHING CO","KASHMIR STORS","KAWAR COLLECTION","KHAN","KHUSHBOO MUMBAI","KHUSHBU CREATION","KHUSHI COLLEATION","KHUSHI GARMENTS","KIKA BHAI & SONS","KIRAN","KIRAN  CLOTH GARMENTS","KISANDIP COLLECTION","KOMAL COLLECTION","KP ARTS FASHION PVT.LTD","KP SALES CORPORATION","KP SATES CORPOTION","KREENA CLOTHING","KRISHNA CREATION","KRISHNA GARMENTS","KRISHNA SELES","KRISHNADIP COLLECTION","KUBER GARMENT","KUBER GARMENT NX","KUSUM SALES","L B CLOTHING","LABHESH AGENCIES","LABHESH ENTERPRISES","LAFFY TAFFY CLOTHING","LAL CHAND PREMCHAND GHOTKIWALA","LAL SAI CREATION","LALU JAIN","LATA CREATION","LAXMI BAG HOUSE","LAXMI LACES & FABRICS","LITTLE JUNCTION","LUDHIANA GH AGENCY","LUTFI","LYF LIFESTYLE PVT.LTD","M.G.TRADERS MUMBAI","M.M.$COMPANY","M.M.COLLECTION RAIPUR","M.S.C0LLECTION","M/S - SHREE SAI","M/S SAINATH COLLECTION","M/S SALASAR","MAA AMBEY TRADER","MAAZ GARMENTS MUMBAI","MADAAN TRXTILES","MADHUR JAIN","MADURI MUMBAI","MAHADEV MEN'S WEAR","MAHALAXMI TRANDS","MAHARASHTRA TRADING CO.","MAHAVIR COLLETION","MAHAVIR MUMBAI PLUS","MAHEK APPARELS MUMBAI","MAHI CREATIONS","MAMA GARMENTS","MANGALAM ENTERPRISES","MANOHAR DRESS","MANSI ENTERPRISES","MARDIA UNITEX","MASTER COMPUTER","MASTI GARMENTS","MASTI MUMBAI","MATOSHRI SALES","MATOSHRI SALESH","ME QUEEN","ME QUEEN MUMBAI","MECH WELL","MEENAXI SALES","MEENU SALES","MEET COLLECTION","MEHER DISTRIBUTORS","MICRO WORLD COMPUTERS","MIKADO FASHION","MILAN ENTERPARICES","MILAN GARMENT LLP","MISTAKE","MODI ENT.","MONA AGENCIES","MORALE INTERIO PVT LTD","MORDEN COLLETION","MOTIRAM SAO MAHADEO SAO THUMSU & CO.","MQ MUMBAI","MS ANNA FASHION","MUNNA MEANS","MY TAILOR FASHION","N LIGHT ELECTRICALS","NAGALC TRADING COMPANY","NAGPUR HANGERS","NAGPUR ITWARI","NAGPUR REDIMAD","NAMAN DRESSES","NAMO VIDYA CLOTHING","NAVY BLUE CLOTHING CO.","NAYAK TRADING COMPANY","NEELAM CRAFT INTERNATIONAL","NEW JAI BHARAT GARMENTS","NEW MAHARASHTRA TRADING CO","NEW PARI COLLECTION","NEW RAJ SONS","NEW SANJAY GARMENTS","NEW TREND ENTERPRISES","NICE LOOK MUMBAI","NIDHI FASHION","NIDHI GARMENT","NIJATAM ENT.","NIJATAM FASHION","NILAM NAVELTY","NILESH ENTERPRISES","NITESH TEXTILES","NOVA MODA CLOTHING","OMKAR GARMENTS","ONE TAKE MUMBAI","ONE WILD MUMBAI","OPENING STOCK","OSHI SALES","OVI SALES","PADMAVATI TRADING COMPANY","PAGLI CHANGE YOUR STYLE","PANT HOUSE","PARADISE HOSIERY","PARAG AGENCIES","PARAS BAG HOUSE","PARI CILLETION","PARTH APPARELS","PARTH CREATION","PAVAN ENTERPRISES","PAYAL COLLECTION","POOJA ENTERPRISES","POOJA MARKETING","POONAM EINTERPEISES","PP SALES CORPORATION","PRAKHAR COLLECTION","PREETAM FASHION","PRIYANSHI ENTERPRISES","R SANDESH MEGA PROJECTS PVT LTD","R.A.GARMENTS","R.D.DISTRIBUTORS","R.HARISH KUMAR","R.K SALES","R.K.FASHIONS","R.L.FAISHON","R.M.SALES CORPORATION","R.NAVINCHANDRA","R.S CLOTHING","R.S. DISTRIBUTORS","R.S.NIRAJ","R.V.SALES","RABBU CHAVDHARI","RADHA MADHV","RADHE RADHE APPARALES","RAHUL PADOSHI","RAJ PAUL & SONS","RAJA GARMENTS","RAJA UNIFORM","RAJAL CLOTHING CO.","RAJDEEP APPARELS","RAJESH GARMENTS","RAJU OSWAL HOSIERY FACTORY","RAMKUMAR GUPTA","RASHI GARMENTS","RASHMI ENTERPRISES","RATAN DRESSES","REELS MUMBAI","RENUKA AGENCIES","RITESH ENTERPRISES","RITIK TRADING CO","ROCHALDAS SONS","ROYAL COLLECTION M","ROYAL ENTERPRISES","RUBY ENT.","S  K MARKETING","S.D NAGPUR","S.K FABRIC","S.K.C.","S.K.TREDING","S.M. COLLECTION","S.M.E. TAADELINKS","S.M.E.CLOTHING","S.M.E.CLOTHING CO","S.M.ENTERPRICES","S.M.FASHION","S.M.MARKETING","S.M.NAGPUR","S.N.C","S.R MARKETING","S.R.S.","S.S.ENTERPRISES","S.SONS","S.T.R CLOTHING CO.MU","S.V.SALES","S.V.SONS","SAC MUMBAI","SACHI COLLETION","SACHIN ENTERPRISES","SADANI ASSOCIATES","SADGURU AGENCIES","SAGAR COLLECTION","SAGAR PRODUCTS","SAHANI FASHION","SAI ENTERPRISES","SAMYAK GARMETS","SANDEEP GARMENTS","SANDEEP JAIN","SANDEEP JAIN R.S.TREDARS","SANJAY TRADE","SANJAY TRADELINK","SANSKAR MEN'S STUDIO","SANSKRITI PULGAON","SANTANI HIZIYRI","SANTI TREADARS","SARTHI","SATIJA TRADE LINKS","SATISH JAIN","SATYAM APPRARELS","SAVLIYA FASHION","SAWALIYA FASHION","SEVA COLLECTION","SHAGUN FASHION","SHAKTI SELECTION","SHANKAR COLLECTION","SHANKAR SONS","SHANTI TRADERS","SHIDHARTH GARMENTS","SHIFA CALLETION MUBAI","SHIFA ENTERPRISES","SHILPA DISTIBUTOR","SHIMANT DESIGNER CLO.PVT LTD","SHIV GARMENTS","SHIV GURU COLLETION","SHIV MARKETING","SHIV SHAKTI FASHION","SHIV TREDINGS","SHOW KIDS","SHREE AMAR GRM.","SHREE AMBIKA APPARELS","SHREE AMBIKA GARMENT","SHREE BALAJI ENTERPRISES","SHREE ENTERPRISES","SHREE FASHIN","SHREE GANESH FASHION","SHREE GANESH GARMENTS","SHREE GANESH HANDLOOM HAVELI","SHREE GANESH STORS","SHREE GIRIRAJ CLOTHING LLP","SHREE GURUNANAK FABRICS","SHREE GURUNANAK HOSIERY","SHREE HARJAS","SHREE KRISHNA CLOTHING","SHREE KRISHNA COLLECTION","SHREE LALCHAND AND SONS","SHREE LAXMICHAND RAMPRASHAD JAIN","SHREE MARKETING","SHREE NAMAN FAMILY SHOPPEE","SHREE NATHJI GARMENTS","SHREE NATHJI..","SHREE PADMAVATI","SHREE RADHE KRISHNA APPREL","SHREE RADHE KRISHNA RADY MADE","SHREE RAM TRDING","SHREE RAVECHI","SHREE S.J.K. EGENSIZ","SHREE SHIVGURU","SHREE SHYAM ENT.","SHREE STARSERIES SANSKAR LLP","SHREE SYAM ENTERPRASES","SHREE TREDING","SHREE VEER CREATION","SHREE VIDHYASAGAR","SHREE VIDYASAGAR APPARELS PVT.LTD.","SHREE VIDYASAGAR FASHION","SHREE VIDYASAGAR OPTICALS","SHREE VIDYASAGARAM GREEN AGENCY","SHREE VIDYASAGRAM","SHREE VIJAY TEXTILES","SHREEJI CLOTHING","SHREEJI CREATION","SHREENATH CLOTHING LLP","SHREY ENTERPRISES","SHREY MARKETING","SHRI HARKRISHAN GARMENTS","SHRI KRISHNA GARMENTS","SHRI KRISHNA HOSIERY","SHRI NAMAN FAMILY SHOPEE","SHRUTI ENTERPRICES","SHUBH LAXMI GARMENTS","SHUBHAM CRIATION","SHUBHAM FASHION","SHUBHAM MARKETING","SHYAM HOSITEX","SIDDHARTH GARMENTS","SIGNATURE COTTON INDUSTRIES LLP","SIMRAN SALES","SITARAM GARMENTS","SITARAM TEXTILES","SLOK APPRELS","SOHANI FAISHON","SOMESHWER NX","SRIMANTS DESIGNER CLO.PVT LTD","STAR SERIES","STAR SERIES CLOTHING CO","SUBH LAXMI GARMENTS","SUDHA COLLECTION","SUHANI FASHION","SUMANGAL TEXTILES","SUNDER HOSIERY","SUNRISE APPARELS","SUNRISE HOSIERY","SURENDRA GARMENTS","SWAPNIL GAEMENTS","SWASTIN MEANS WEAR","T.D.S ENTERPRISE","TANMAY SALES","TARGET JEANS","TARUN SPORTS","TESLAA ART STUDIO MUMBAI","TEST","THREAD APPARELS PRIVET LIMITED","TIKA BAI","TITU SONS","UJWAL AUTOMATION","UNISOURCE CLOTHING","UNITY CLOTHING","UNNATI CREATION","UNNATI ENTERPRISES","USHA COLLECTION","UTKARSH CREATION","V.M.APPERAL","V.R.","V.R.COLLECTION","V-2","V2 FASHION","V-3 FASHION","VANIS CREATION","VANITA ENTERPRISES","VANSH APPAREL","VARDHMAN COLLECTION","VARTIKA FASHION","VASTARK CLOTHING","VASTE TRADES","VASUDEO& CO","VEENAL CLOTHING CLOTHING","VEER JAINAM MARKETING","VIDAYSHREE COLLECTION","VIDHYASAGAR COLLETIONE","VIDHYASAGAR OTICALS","VIDHYSARAM JABLPUR","VIDYASAGAR TRADERS","VIJAY IMPEX","VIKAS COLLECTION","VINAY JAIN","VINAY SALES","VINI ART","VINI HOSIERY","VINIT JAIN","VINTAGE CLOTHING","VIPUL BHAI","VRUTIKA FASHION","WAHE GURU CREATION","WARDHAMAN TRADERS","WARNING PANT HOUSE","WESTERN ADDA MUMBAI","XXXXXXX","YASH ENTERPRISES"];
+
+  let savedParties = [];
+
+  function loadSavedParties() {
+    try {
+      const stored = JSON.parse(localStorage.getItem('returnGoodsParties') || '[]');
+      savedParties = Array.from(new Set([...PRELOADED_PARTIES, ...(Array.isArray(stored) ? stored : [])])).filter(Boolean);
+    } catch (_) { savedParties = [...PRELOADED_PARTIES]; }
+    updatePartySuggestions();
+  }
+
+  function savePartyName(name) {
+    const n = String(name || '').trim();
+    if (!n) return;
+    if (!savedParties.some(p => p.toLowerCase() === n.toLowerCase())) savedParties.push(n);
+    try { localStorage.setItem('returnGoodsParties', JSON.stringify(savedParties)); } catch (_) {}
+    updatePartySuggestions();
+  }
+
+  function updatePartySuggestions() {
+    const dl = document.getElementById('partySuggestions');
+    if (!dl) return;
+    dl.innerHTML = savedParties.slice().sort((a,b)=>a.localeCompare(b)).map(p=>`<option value="${escapeHtml(p)}"></option>`).join('');
+  }
 
   function usernameToEmail(username) {
     const u = String(username || '').trim().toLowerCase();
@@ -615,6 +669,7 @@
   function getCalculation() {
     const itemTotal = items.reduce((sum, r) =>
       sum + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
+    const totalQty = items.reduce((sum, r) => sum + (parseFloat(r.qty) || 0), 0);
 
     const lessType = document.getElementById('lessType')?.value || 'none';
     const lessValue = parseFloat(document.getElementById('lessValue')?.value) || 0;
@@ -638,6 +693,7 @@
 
     return {
       itemTotal,
+      totalQty,
       lessType,
       lessValue,
       lessAmount,
@@ -669,6 +725,7 @@
     const c = getCalculation();
 
     document.getElementById('calcItemTotal').textContent = money(c.itemTotal);
+    document.getElementById('calcTotalQty').textContent = `${c.totalQty} pcs`;
     document.getElementById('calcLess').textContent = '- ' + money(c.lessAmount);
     document.getElementById('calcAdd').textContent = '+ ' + money(c.addAmount);
     document.getElementById('calcTaxable').textContent = money(c.taxableAmount);
@@ -695,14 +752,17 @@
   function showTab(tab) {
     document.getElementById('view-new').style.display = tab === 'new' ? 'block' : 'none';
     document.getElementById('view-history').style.display = tab === 'history' ? 'block' : 'none';
+    document.getElementById('view-parties').style.display = tab === 'parties' ? 'block' : 'none';
     document.getElementById('view-detail').style.display = tab === 'detail' ? 'block' : 'none';
     document.getElementById('view-reports').style.display = tab === 'reports' ? 'block' : 'none';
     document.getElementById('view-staff').style.display = tab === 'staff' ? 'block' : 'none';
     document.getElementById('tab-new').classList.toggle('active', tab === 'new');
     document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+    document.getElementById('tab-parties').classList.toggle('active', tab === 'parties');
     document.getElementById('tab-reports').classList.toggle('active', tab === 'reports');
     document.getElementById('tab-staff').classList.toggle('active', tab === 'staff');
     if (tab === 'history') renderHistory();
+    if (tab === 'parties') renderParties();
     if (tab === 'reports') { applyRoleUI(); initReportDates(); }
     if (tab === 'staff' && isAdmin()) renderStaff();
   }
@@ -730,6 +790,7 @@
   async function saveSlip() {
     const party = document.getElementById('partyName').value.trim();
     const dm = document.getElementById('dmNumber').value.trim();
+    const remarks = document.getElementById('remarks').value.trim();
     const validItems = items
       .map(r => ({ article: r.article.trim(), qty: parseFloat(r.qty) || 0, price: parseFloat(r.price) || 0 }))
       .filter(r => r.article && r.qty > 0);
@@ -747,11 +808,13 @@
           date: old?.date || new Date().toISOString(),
           party,
           dmNumber: dm,
+          remarks,
           items: validItems,
           ...getCalculation(),
           updatedAt: new Date().toISOString()
         };
         await updateDoc(doc(db, 'returnSlips', editingSlipId), updated);
+        savePartyName(party);
         const savedSlip = { id: editingSlipId, ...updated };
         generatePDF(savedSlip, { download: true });
         toast('Return slip updated');
@@ -762,6 +825,7 @@
           date: new Date().toISOString(),
           party,
           dmNumber: dm,
+          remarks,
           items: validItems,
           ...getCalculation()
         };
@@ -773,6 +837,7 @@
 
       document.getElementById('partyName').value = '';
       document.getElementById('dmNumber').value = '';
+      document.getElementById('remarks').value = '';
       items = [];
       document.getElementById('lessType').value = 'none';
       document.getElementById('lessValue').value = '';
@@ -797,6 +862,7 @@
     editingSlipId = slipId;
     document.getElementById('partyName').value = slip.party || '';
     document.getElementById('dmNumber').value = slip.dmNumber || '';
+    document.getElementById('remarks').value = slip.remarks || '';
     items = (slip.items || []).map(r => ({ id: uid(), article: r.article || '', qty: r.qty ?? '', price: r.price ?? '' }));
     setCalcInputs(slip);
     if (!items.length) addItemRow(); else renderItems();
@@ -808,6 +874,7 @@
     opts = opts || {};
     const c = {
       itemTotal: Number(slip.itemTotal ?? (slip.items || []).reduce((s, r) => s + r.qty * r.price, 0)),
+      totalQty: Number(slip.totalQty ?? (slip.items || []).reduce((s, r) => s + (Number(r.qty) || 0), 0)),
       lessAmount: Number(slip.lessAmount || 0),
       addAmount: Number(slip.addAmount || 0),
       taxableAmount: Number(slip.taxableAmount ?? slip.grandTotal ?? 0),
@@ -824,11 +891,13 @@
       ...item,
       lineTotal: Number(item.qty) * Number(item.price)
     }));
+    const totalQty = Number(slip.totalQty ?? rows.reduce((n, r) => n + (Number(r.qty) || 0), 0));
 
     // Estimate a receipt height based on item count and adjustment rows.
-    const summaryRows = 3 + (c.lessAmount > 0 ? 1 : 0) + (c.addAmount > 0 ? 1 : 0)
+    const hasRemarks = String(slip.remarks || '').trim().length > 0;
+    const summaryRows = 4 + (c.lessAmount > 0 ? 1 : 0) + (c.addAmount > 0 ? 1 : 0)
       + (c.gstAmount > 0 ? (c.gstType === 'igst' ? 1 : 2) : 0);
-    const finalHeight = Math.max(70, Math.min(260, 75 + rows.length * 6 + summaryRows * 5));
+    const finalHeight = Math.max(70, Math.min(280, 82 + rows.length * 6 + summaryRows * 5 + (hasRemarks ? 14 : 0)));
 
     const receipt = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
     const pageWidth = 80;
@@ -874,6 +943,15 @@
     receipt.line(5, y, 75, y);
     y += 6;
 
+    if (hasRemarks) {
+      receipt.setFont('helvetica', 'bold'); receipt.setFontSize(8.5);
+      receipt.text('Remarks', 5, y); y += 4;
+      receipt.setFont('helvetica', 'normal'); receipt.setFontSize(8);
+      const remarkLines = receipt.splitTextToSize(String(slip.remarks), 70);
+      receipt.text(remarkLines, 5, y); y += remarkLines.length * 4 + 3;
+      receipt.line(5, y, 75, y); y += 5;
+    }
+
     const summary = (label, value, bold = false) => {
       receipt.setFont('helvetica', bold ? 'bold' : 'normal');
       receipt.setFontSize(bold ? 9.5 : 8.5);
@@ -882,7 +960,14 @@
       y += 5;
     };
 
-    summary('Item Total', c.itemTotal);
+    // Item Total row: show the automatically calculated total quantity directly
+    // under the Qty column, matching the thermal-slip layout.
+    receipt.setFont('helvetica', 'normal');
+    receipt.setFontSize(8.5);
+    receipt.text('Item Total', 5, y);
+    receipt.text(String(totalQty), 38, y, { align: 'right' });
+    receipt.text(c.itemTotal.toFixed(2), 75, y, { align: 'right' });
+    y += 5;
     if (c.lessAmount > 0) summary('Less', -c.lessAmount);
     if (c.addAmount > 0) summary('Add', c.addAmount);
     summary('Taxable', c.taxableAmount);
@@ -917,6 +1002,7 @@
 
     const c = {
       itemTotal: Number(slip.itemTotal ?? (slip.items || []).reduce((s, r) => s + r.qty * r.price, 0)),
+      totalQty: Number(slip.totalQty ?? (slip.items || []).reduce((s, r) => s + (Number(r.qty) || 0), 0)),
       lessAmount: Number(slip.lessAmount || 0),
       addAmount: Number(slip.addAmount || 0),
       taxableAmount: Number(slip.taxableAmount ?? slip.grandTotal ?? 0),
@@ -939,8 +1025,9 @@
       </tr>
     `).join('');
 
+    const remarkBlock = slip.remarks ? `<div class="remarks"><strong>Remarks:</strong> ${escapeHtml(slip.remarks)}</div>` : '';
     const adjustmentRows = `
-      <div class="calc"><span>Item Total</span><span>${c.itemTotal.toFixed(2)}</span></div>
+      <div class="calc item-total-row"><span>Item Total</span><span class="qty-total">${c.totalQty}</span><span class="amount-total">${c.itemTotal.toFixed(2)}</span></div>
       ${c.lessAmount > 0 ? `<div class="calc"><span>Less</span><span>- ${c.lessAmount.toFixed(2)}</span></div>` : ''}
       ${c.addAmount > 0 ? `<div class="calc"><span>Add</span><span>+ ${c.addAmount.toFixed(2)}</span></div>` : ''}
       <div class="calc"><span>Taxable Amount</span><span>${c.taxableAmount.toFixed(2)}</span></div>
@@ -976,7 +1063,11 @@
   th:nth-child(2), td:nth-child(2) { width: 13%; text-align: right; }
   th:nth-child(3), td:nth-child(3) { width: 25%; text-align: right; }
   th:nth-child(4), td:nth-child(4) { width: 28%; text-align: right; }
+  .remarks { margin: 7px 0; padding: 6px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; line-height: 1.35; }
   .calc { display: flex; justify-content: space-between; padding-top: 4px; }
+  .item-total-row { display: grid; grid-template-columns: 34% 13% 25% 28%; align-items: baseline; }
+  .item-total-row .qty-total { text-align: right; }
+  .item-total-row .amount-total { grid-column: 4; text-align: right; }
   .total { display: flex; justify-content: flex-end; gap: 10px; font-weight: 700; padding-top: 8px; border-top: 1px solid #000; margin-top: 5px; }
   .thanks { text-align: center; margin-top: 16px; font-style: italic; }
 </style>
@@ -993,6 +1084,7 @@
     <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
+  ${remarkBlock}
   ${adjustmentRows}
   <div class="total"><span>Grand Total</span><span>${c.grandTotal.toFixed(2)}</span></div>
   <div class="thanks">THANK YOU</div>
@@ -1131,8 +1223,10 @@
           'Slip ID': slip.id,
           'Party Name': slip.party,
           'DM Number': slip.dmNumber || '',
+          Remarks: slip.remarks || '',
           'Article Number': item.article,
           Qty: Number(item.qty || 0),
+          'Slip Total Qty': Number(slip.totalQty ?? (slip.items || []).reduce((n, i) => n + Number(i.qty || 0), 0)),
           'Price/Pc': Number(item.price || 0),
           Total: Number(item.qty || 0) * Number(item.price || 0),
           'Item Total': Number(slip.itemTotal || 0),
@@ -1165,6 +1259,91 @@
     const to = document.getElementById('reportTo').value;
     XLSX.writeFile(workbook, `RETURN_REPORT_${from}_TO_${to}.xlsx`);
     toast('Excel downloaded');
+  }
+
+  async function renderParties() {
+    if (!cloudSlips.length) await loadSlips();
+    const search = (document.getElementById('partySearch')?.value || '').trim().toLowerCase();
+    const map = new Map();
+    savedParties.forEach(name => map.set(name.toLowerCase(), { name, slips: [] }));
+    cloudSlips.forEach(s => {
+      const name = String(s.party || '').trim();
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (!map.has(key)) map.set(key, { name, slips: [] });
+      map.get(key).slips.push(s);
+    });
+    const parties = [...map.values()].filter(p => !search || p.name.toLowerCase().includes(search)).sort((a,b)=>a.name.localeCompare(b.name));
+    const list = document.getElementById('partyList');
+    if (!parties.length) { list.innerHTML = '<div class="empty">No parties found.</div>'; return; }
+    list.innerHTML = '';
+    parties.forEach(p => {
+      const total = p.slips.reduce((n,s)=>n+Number(s.grandTotal||0),0);
+      const qty = p.slips.reduce((n,s)=>(n+(s.items||[]).reduce((q,i)=>q+Number(i.qty||0),0)),0);
+      const div = document.createElement('div'); div.className='slip-card';
+      div.innerHTML = `<div class="slip-main"><div class="party">${escapeHtml(p.name)}</div><div class="meta">${p.slips.length} return${p.slips.length===1?'':'s'} · Qty ${qty}</div></div><div class="slip-amount">${money(total)}</div>`;
+      div.onclick=()=>showPartyReport(p.name); list.appendChild(div);
+    });
+  }
+
+  function getPartySlips(name) {
+    const key = String(name||'').trim().toLowerCase();
+    return cloudSlips.filter(s => String(s.party||'').trim().toLowerCase() === key).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  }
+
+  function showPartyReport(name) {
+    const slips = getPartySlips(name);
+    const card = document.getElementById('partyReportCard');
+    const qty = slips.reduce((n,s)=>(n+(s.items||[]).reduce((q,i)=>q+Number(i.qty||0),0)),0);
+    const itemTotal = slips.reduce((n,s)=>n+Number(s.itemTotal||0),0);
+    const less = slips.reduce((n,s)=>n+Number(s.lessAmount||0),0);
+    const add = slips.reduce((n,s)=>n+Number(s.addAmount||0),0);
+    const taxable = slips.reduce((n,s)=>n+Number(s.taxableAmount||0),0);
+    const gst = slips.reduce((n,s)=>n+Number(s.gstAmount||0),0);
+    const grand = slips.reduce((n,s)=>n+Number(s.grandTotal||0),0);
+    card.style.display='block';
+    card.innerHTML = `<div style="font-size:1.15rem;font-weight:800;">${escapeHtml(name)}</div>
+      <div class="party-stat-grid">
+        <div class="party-stat"><span>Total Returns</span><strong>${slips.length}</strong></div>
+        <div class="party-stat"><span>Total Quantity</span><strong>${qty}</strong></div>
+        <div class="party-stat"><span>Item Total</span><strong>${money(itemTotal)}</strong></div>
+        <div class="party-stat"><span>Less</span><strong>${money(less)}</strong></div>
+        <div class="party-stat"><span>Add</span><strong>${money(add)}</strong></div>
+        <div class="party-stat"><span>Taxable Amount</span><strong>${money(taxable)}</strong></div>
+        <div class="party-stat"><span>Total GST</span><strong>${money(gst)}</strong></div>
+        <div class="party-stat"><span>Grand Total</span><strong>${money(grand)}</strong></div>
+      </div>
+      <div style="margin-top:18px;font-weight:700;">Return History</div>
+      <div style="overflow:auto;margin-top:8px;"><table class="detail-table"><thead><tr><th>Date</th><th>DM No.</th><th>Qty</th><th>Grand Total</th></tr></thead><tbody>
+      ${slips.length ? slips.map(s=>{const d=new Date(s.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});const q=(s.items||[]).reduce((n,i)=>n+Number(i.qty||0),0);return `<tr onclick="viewSlip('${s.id}')" style="cursor:pointer"><td>${d}</td><td>${escapeHtml(s.dmNumber||'-')}</td><td>${q}</td><td>${money(s.grandTotal)}</td></tr>`}).join('') : '<tr><td colspan="4">No returns yet.</td></tr>'}
+      </tbody></table></div>
+      <div class="party-report-actions">
+        <button class="btn-fill" onclick="exportPartyExcel('${escapeHtml(name).replace(/'/g,"\\'")}')" style="display:${isAdmin()?'block':'none'}">📥 Export Excel</button>
+        <button class="btn-outline" onclick="exportPartyPDF('${escapeHtml(name).replace(/'/g,"\\'")}')">PDF Statement</button>
+      </div>`;
+    card.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  function exportPartyExcel(name) {
+    if (!isAdmin()) { toast('Excel export is admin-only'); return; }
+    const slips=getPartySlips(name); if(!slips.length){toast('No returns for this party');return;}
+    const rows=[];
+    slips.forEach(s=> (s.items||[]).forEach(item=> rows.push({
+      Date:new Date(s.date).toLocaleDateString('en-IN'), 'Slip ID':s.id, 'Party Name':s.party, 'DM Number':s.dmNumber||'', Remarks:s.remarks||'', 'Article Number':item.article, Qty:Number(item.qty||0), 'Slip Total Qty':Number(s.totalQty ?? (s.items||[]).reduce((n,i)=>n+Number(i.qty||0),0)), 'Price/Pc':Number(item.price||0), Total:Number(item.qty||0)*Number(item.price||0), 'Item Total':Number(s.itemTotal||0), Less:Number(s.lessAmount||0), Add:Number(s.addAmount||0), 'Taxable Amount':Number(s.taxableAmount||0), 'GST Rate':Number(s.gstRate||0), 'GST Type':s.gstType||'', CGST:Number(s.cgst||0), SGST:Number(s.sgst||0), IGST:Number(s.igst||0), 'GST Amount':Number(s.gstAmount||0), 'Grand Total':Number(s.grandTotal||0)
+    })));
+    const ws=XLSX.utils.json_to_sheet(rows); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Party Report'); XLSX.writeFile(wb,`PARTY_REPORT_${name.replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'')}.xlsx`); toast('Party Excel downloaded');
+  }
+
+  function exportPartyPDF(name) {
+    const slips=getPartySlips(name); if(!slips.length){toast('No returns for this party');return;}
+    const itemTotal=slips.reduce((n,s)=>n+Number(s.itemTotal||0),0), less=slips.reduce((n,s)=>n+Number(s.lessAmount||0),0), add=slips.reduce((n,s)=>n+Number(s.addAmount||0),0), taxable=slips.reduce((n,s)=>n+Number(s.taxableAmount||0),0), gst=slips.reduce((n,s)=>n+Number(s.gstAmount||0),0), grand=slips.reduce((n,s)=>n+Number(s.grandTotal||0),0), qty=slips.reduce((n,s)=>(n+(s.items||[]).reduce((q,i)=>q+Number(i.qty||0),0)),0);
+    const doc=new jsPDF({unit:'mm',format:'a4'}); let y=18; const w=210;
+    doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SHREE VIDYASAGRAM',w/2,y,{align:'center'});y+=8;doc.setFontSize(12);doc.text('PARTY RETURN STATEMENT',w/2,y,{align:'center'});y+=10;doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text(`Party: ${name}`,15,y);y+=5;doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`,15,y);y+=9;
+    doc.setFont('helvetica','bold');doc.text('Summary',15,y);y+=6;doc.setFont('helvetica','normal');
+    [['Total Returns',slips.length],['Total Quantity',qty],['Item Total',money(itemTotal)],['Less',money(less)],['Add',money(add)],['Taxable Amount',money(taxable)],['Total GST',money(gst)],['Grand Total',money(grand)]].forEach(([l,v])=>{doc.text(String(l),15,y);doc.text(String(v),195,y,{align:'right'});y+=5;});
+    y+=4;doc.setFont('helvetica','bold');doc.text('Return History',15,y);y+=6;doc.text('Date',15,y);doc.text('DM No.',70,y);doc.text('Qty',120,y,{align:'right'});doc.text('Grand Total',195,y,{align:'right'});y+=2;doc.line(15,y,195,y);y+=6;doc.setFont('helvetica','normal');
+    slips.forEach(s=>{if(y>280){doc.addPage();y=18;}const d=new Date(s.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});const q=(s.items||[]).reduce((n,i)=>n+Number(i.qty||0),0);doc.text(d,15,y);doc.text(String(s.dmNumber||'-'),70,y);doc.text(String(q),120,y,{align:'right'});doc.text(money(s.grandTotal),195,y,{align:'right'});y+=6;});
+    doc.save(`PARTY_STATEMENT_${name.replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'')}.pdf`); toast('Party PDF downloaded');
   }
 
   async function renderHistory() {
@@ -1212,12 +1391,14 @@
     document.getElementById('detailCard').innerHTML = `
       <div style="font-weight:700; font-size:1.05rem;">${escapeHtml(slip.party)}</div>
       <div style="color:var(--ink-soft); font-size:0.85rem; margin-top:4px;">DM No. ${escapeHtml(slip.dmNumber || '-')} · ${d}</div>
+      ${slip.remarks ? `<div style="margin-top:12px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:.88rem;"><strong>Remarks:</strong> ${escapeHtml(slip.remarks)}</div>` : ''}
       <table class="detail-table">
         <thead><tr><th>Article</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       <div style="margin-top:12px;font-size:.88rem;">
         <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Item Total</span><strong>${money(slip.itemTotal ?? slip.grandTotal)}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Total Qty</span><strong>${Number(slip.totalQty ?? (slip.items || []).reduce((n,i)=>n+Number(i.qty||0),0))} pcs</strong></div>
         ${Number(slip.lessAmount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Less</span><strong>- ${money(slip.lessAmount)}</strong></div>` : ''}
         ${Number(slip.addAmount || 0) > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Add</span><strong>+ ${money(slip.addAmount)}</strong></div>` : ''}
         <div style="display:flex;justify-content:space-between;padding:4px 0;"><span>Taxable Amount</span><strong>${money(slip.taxableAmount ?? slip.grandTotal)}</strong></div>
@@ -1257,6 +1438,10 @@
   window.printSlip = printSlip;
   window.showDateReport = showDateReport;
   window.exportDateRangeExcel = exportDateRangeExcel;
+  window.renderParties = renderParties;
+  window.showPartyReport = showPartyReport;
+  window.exportPartyExcel = exportPartyExcel;
+  window.exportPartyPDF = exportPartyPDF;
   window.generatePDF = generatePDF;
   window.viewSlip = viewSlip;
   window.login = login;
@@ -1266,6 +1451,7 @@
   window.toggleStaff = toggleStaff;
   window.deleteSlip = deleteSlip;
 
+  loadSavedParties();
   addItemRow();
 </script>
 </body>
