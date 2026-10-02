@@ -897,7 +897,7 @@
     const hasRemarks = String(slip.remarks || '').trim().length > 0;
     const summaryRows = 4 + (c.lessAmount > 0 ? 1 : 0) + (c.addAmount > 0 ? 1 : 0)
       + (c.gstAmount > 0 ? (c.gstType === 'igst' ? 1 : 2) : 0);
-    const finalHeight = Math.max(70, Math.min(280, 82 + rows.length * 6 + summaryRows * 5 + (hasRemarks ? 14 : 0)));
+    const finalHeight = Math.max(78, Math.min(280, 90 + rows.length * 6 + summaryRows * 5 + (hasRemarks ? 14 : 0)));
 
     const receipt = new jsPDF({ unit: 'mm', format: [80, finalHeight] });
     const pageWidth = 80;
@@ -981,15 +981,30 @@
       }
     }
 
-    y += 1;
+    // Highlighted bottom summary: total quantity as "31P" and Grand Total.
+    y += 2;
+    const boxX = 5;
+    const boxW = 70;
+    const boxH = 18;
+    receipt.setDrawColor(0);
+    receipt.setLineWidth(0.45);
+    receipt.rect(boxX, y, boxW, boxH);
+
+    // Vertical divider keeps quantity and amount visually separate.
+    receipt.line(30, y, 30, y + boxH);
+
     receipt.setFont('helvetica', 'bold');
-    receipt.setFontSize(10);
-    receipt.text('Grand Total', 58, y, { align: 'right' });
-    receipt.text(c.grandTotal.toFixed(2), 75, y, { align: 'right' });
-    y += 10;
+    receipt.setFontSize(16);
+    receipt.text(`${totalQty}P`, 17.5, y + 7.5, { align: 'center' });
+
+    receipt.setFontSize(7.5);
+    receipt.text('GRAND TOTAL', 52.5, y + 6, { align: 'center' });
+    receipt.setFontSize(11);
+    receipt.text(c.grandTotal.toFixed(2), 52.5, y + 13, { align: 'center' });
+    y += boxH + 7;
 
     receipt.setFont('helvetica', 'italic');
-    receipt.setFontSize(10);
+    receipt.setFontSize(9);
     receipt.text('THANK YOU', pageWidth / 2, y, { align: 'center' });
 
     const filename = `RETURN_${slip.id}.pdf`;
@@ -1068,8 +1083,12 @@
   .item-total-row { display: grid; grid-template-columns: 34% 13% 25% 28%; align-items: baseline; }
   .item-total-row .qty-total { text-align: right; }
   .item-total-row .amount-total { grid-column: 4; text-align: right; }
-  .total { display: flex; justify-content: flex-end; gap: 10px; font-weight: 700; padding-top: 8px; border-top: 1px solid #000; margin-top: 5px; }
-  .thanks { text-align: center; margin-top: 16px; font-style: italic; }
+  .bottom-summary { display:grid; grid-template-columns: 36% 64%; border:1.5px solid #000; margin-top:8px; min-height:22mm; }
+  .qty-highlight { display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; border-right:1.5px solid #000; }
+  .amount-highlight { display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:700; }
+  .amount-label { font-size:9px; margin-bottom:3px; }
+  .amount-value { font-size:15px; }
+  .thanks { text-align: center; margin-top: 10px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -1086,7 +1105,13 @@
   </table>
   ${remarkBlock}
   ${adjustmentRows}
-  <div class="total"><span>Grand Total</span><span>${c.grandTotal.toFixed(2)}</span></div>
+  <div class="bottom-summary">
+    <div class="qty-highlight">${c.totalQty}P</div>
+    <div class="amount-highlight">
+      <div class="amount-label">GRAND TOTAL</div>
+      <div class="amount-value">${c.grandTotal.toFixed(2)}</div>
+    </div>
+  </div>
   <div class="thanks">THANK YOU</div>
 </body>
 </html>`);
