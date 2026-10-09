@@ -1007,7 +1007,16 @@
     receipt.setFontSize(9);
     receipt.text('THANK YOU', pageWidth / 2, y, { align: 'center' });
 
-    const filename = `RETURN_${slip.id}.pdf`;
+    // Use Party Name + DM Number as the PDF filename.
+    // Remove characters that are not safe in filenames.
+    const safeFilenamePart = value => String(value || '')
+      .trim()
+      .replace(/[\\\\/:*?"<>|]/g, '-')
+      .replace(/\\s+/g, ' ')
+      .replace(/[. ]+$/g, '');
+    const partyPart = safeFilenamePart(slip.party) || 'RETURN';
+    const dmPart = safeFilenamePart(slip.dmNumber);
+    const filename = `${partyPart}${dmPart ? '_' + dmPart : ''}.pdf`;
     if (opts.download) receipt.save(filename);
     return { doc: receipt, filename };
   }
