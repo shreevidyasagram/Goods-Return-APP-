@@ -885,12 +885,14 @@ Mobile: 9326169493</div>
     const esc = escapeHtml;
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Return Challan - ${esc(name)}</title>
       <style>
-        @page{size:A4;margin:15mm}*{box-sizing:border-box}body{margin:0;color:#171717;background:#fff;font-family:Arial,Helvetica,sans-serif}
-        .sheet{width:100%;}.topline{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d6d6d6;padding-bottom:8px;margin-bottom:16px;color:#555;font-size:9pt;letter-spacing:2px;text-transform:uppercase}
-        .label{width:100%;border:1px solid #dedede;padding:12mm 11mm;margin-top:12mm;page-break-inside:avoid}.eyebrow{font-size:9pt;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:12mm}
-        .kicker{font-size:10pt;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:4mm}.party{font-size:16pt;font-weight:600;margin-bottom:4mm;overflow-wrap:anywhere}.address{font-size:11pt;line-height:1.65;white-space:pre-line;overflow-wrap:anywhere}
-        .rule{border:0;border-top:1px solid #d8d8d8;margin:9mm 0}.from-title{font-size:12pt;font-weight:600;margin-bottom:3mm}.from-address{font-size:10pt;line-height:1.65}
-        .footer{margin-top:12mm;border-top:1px solid #ddd;padding-top:4mm;color:#666;font-size:8pt;letter-spacing:.5px}
+        @page{size:A4;margin:8mm}*{box-sizing:border-box}html,body{margin:0;min-height:100%;color:#171717;background:#fff;font-family:Arial,Helvetica,sans-serif}
+        .sheet{width:100%;min-height:281mm;display:flex;flex-direction:column}.topline{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d6d6d6;padding:0 1mm 4mm;margin-bottom:7mm;color:#555;font-size:10pt;letter-spacing:2px;text-transform:uppercase;flex-shrink:0}
+        .label{width:100%;flex:1;min-height:255mm;border:1px solid #dedede;padding:17mm 17mm 14mm;margin:0;display:flex;flex-direction:column;page-break-inside:avoid}
+        .eyebrow{font-size:12pt;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:16mm}
+        .kicker{font-size:14pt;letter-spacing:1.8px;text-transform:uppercase;color:#555;margin-bottom:6mm}.party{font-size:25pt;font-weight:600;margin-bottom:6mm;overflow-wrap:anywhere}.address{font-size:18pt;line-height:1.7;white-space:pre-line;overflow-wrap:anywhere}
+        .rule{border:0;border-top:1px solid #d8d8d8;margin:23mm 0 15mm}.from-title{font-size:21pt;font-weight:600;margin-bottom:5mm}.from-address{font-size:16pt;line-height:1.75}
+        .footer{margin-top:auto;border-top:1px solid #ddd;padding-top:6mm;color:#666;font-size:10pt;letter-spacing:.7px}
+        @media print{html,body{width:100%;height:281mm}.sheet{height:281mm;min-height:281mm}.label{min-height:0}}
       </style></head><body><main class="sheet"><div class="topline"><span>Shree Vidyasagram</span><span>Return Challan</span></div>
       <section class="label"><div class="eyebrow">Shipment</div><div class="kicker">TO</div><div class="party">${esc(name)}</div>
       <div class="address">${esc(address)}<br>Mobile: ${esc(phone)}</div><hr class="rule"><div class="kicker">FROM</div><div class="from-title">${esc(RETURN_FROM.name)}</div>
