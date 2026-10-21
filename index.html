@@ -160,6 +160,16 @@
   .party-stat strong{display:block;margin-top:4px;font-size:1rem;}
   .party-report-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
   @media(min-width:700px){.party-stat-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+  .return-label-preview{background:#fff;border:1px solid #dedede;border-radius:8px;padding:22px;color:#171717;max-width:100%;}
+  .return-label-preview .eyebrow{font-size:10px;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:14px;}
+  .return-label-preview .label-kicker{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px;color:#555;}
+  .return-label-preview .label-party{font-size:19px;font-weight:600;letter-spacing:.2px;margin-bottom:8px;overflow-wrap:anywhere;}
+  .return-label-preview .label-address{font-size:13px;line-height:1.65;white-space:pre-line;overflow-wrap:anywhere;}
+  .return-label-preview .label-rule{border:0;border-top:1px solid #d8d8d8;margin:18px 0;}
+  .return-label-preview .from-title{font-size:14px;font-weight:600;letter-spacing:.5px;margin-bottom:7px;}
+  .return-label-preview .from-address{font-size:12px;line-height:1.65;white-space:pre-line;}
+  .return-challan-help{font-size:.8rem;color:var(--ink-soft);line-height:1.5;margin-top:8px;}
+  @media print{.no-print{display:none!important;}}
 </style>
 </head>
 <body>
@@ -196,6 +206,7 @@
   <button id="tab-new" class="active" onclick="showTab('new')">New Return</button>
   <button id="tab-history" onclick="showTab('history')">History</button>
   <button id="tab-parties" onclick="showTab('parties')">Parties</button>
+  <button id="tab-return-challan" onclick="showTab('return-challan')">Return Challan</button>
   <button id="tab-reports" onclick="showTab('reports')">Reports</button>
   <button id="tab-staff" style="display:none" onclick="showTab('staff')">Staff</button>
 </nav>
@@ -316,6 +327,46 @@
     </div>
     <div class="card" style="padding:0" id="partyList"></div>
     <div class="card" id="partyReportCard" style="display:none"></div>
+  </section>
+
+  <!-- RETURN CHALLAN ADDRESS LABEL -->
+  <section id="view-return-challan" style="display:none">
+    <div class="card">
+      <div style="font-weight:700;font-size:1.05rem;margin-bottom:5px;">Return Challan · Address Label</div>
+      <div class="return-challan-help">Choose a party from the existing list. Save its address and phone number once, and they will be remembered in this browser for future labels.</div>
+      <div class="field" style="margin-top:16px;">
+        <label for="labelPartyName">Party Name</label>
+        <input id="labelPartyName" type="text" list="partySuggestions" autocomplete="off" placeholder="Select or type party name" oninput="loadPartyAddress()">
+      </div>
+      <div class="field">
+        <label for="labelPartyAddress">Full Party Address (including city, state and PIN code)</label>
+        <textarea id="labelPartyAddress" rows="3" style="width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:7px;font:inherit;resize:vertical;" placeholder="Shop/building, street, area, city, state, PIN code"></textarea>
+      </div>
+      <div class="field">
+        <label for="labelPartyPhone">Party Phone Number</label>
+        <input id="labelPartyPhone" type="tel" inputmode="tel" placeholder="Enter phone number">
+      </div>
+      <div class="action-row no-print">
+        <button class="btn-outline" onclick="savePartyAddress()">Save Party Details</button>
+        <button class="btn-fill" onclick="printReturnChallanA4()">Print A4</button>
+      </div>
+      <div class="return-challan-help">FROM address is fixed. State: Maharashtra, Code: 27. GSTIN and other invoice details are intentionally omitted.</div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:12px;">Premium Minimal Preview</div>
+      <div id="returnLabelPreview" class="return-label-preview">
+        <div class="eyebrow">Shipment</div>
+        <div class="label-kicker">TO</div>
+        <div class="label-party">PARTY NAME</div>
+        <div class="label-address">Full address and PIN code</div>
+        <hr class="label-rule">
+        <div class="label-kicker">FROM</div>
+        <div class="from-title">SHREE VIDYASAGARAM (NAGPUR)</div>
+        <div class="from-address">1816, Near State Bank of India, Main Road, Khaperkheda, Nagpur, Maharashtra – 441102
+Maharashtra, Code: 27
+Mobile: 9326169493</div>
+      </div>
+    </div>
   </section>
 
   <!-- REPORTS -->
@@ -753,18 +804,99 @@
     document.getElementById('view-new').style.display = tab === 'new' ? 'block' : 'none';
     document.getElementById('view-history').style.display = tab === 'history' ? 'block' : 'none';
     document.getElementById('view-parties').style.display = tab === 'parties' ? 'block' : 'none';
+    document.getElementById('view-return-challan').style.display = tab === 'return-challan' ? 'block' : 'none';
     document.getElementById('view-detail').style.display = tab === 'detail' ? 'block' : 'none';
     document.getElementById('view-reports').style.display = tab === 'reports' ? 'block' : 'none';
     document.getElementById('view-staff').style.display = tab === 'staff' ? 'block' : 'none';
     document.getElementById('tab-new').classList.toggle('active', tab === 'new');
     document.getElementById('tab-history').classList.toggle('active', tab === 'history');
     document.getElementById('tab-parties').classList.toggle('active', tab === 'parties');
+    document.getElementById('tab-return-challan').classList.toggle('active', tab === 'return-challan');
     document.getElementById('tab-reports').classList.toggle('active', tab === 'reports');
     document.getElementById('tab-staff').classList.toggle('active', tab === 'staff');
     if (tab === 'history') renderHistory();
     if (tab === 'parties') renderParties();
+    if (tab === 'return-challan') { updatePartySuggestions(); updateReturnLabelPreview(); }
     if (tab === 'reports') { applyRoleUI(); initReportDates(); }
     if (tab === 'staff' && isAdmin()) renderStaff();
+  }
+
+  // Return Challan address-book details are kept locally so the existing Firebase slip data is untouched.
+  const PARTY_ADDRESS_KEY = 'returnGoodsPartyAddressBook';
+  const RETURN_FROM = {
+    name: 'SHREE VIDYASAGARAM (NAGPUR)',
+    address: '1816, Near State Bank of India, Main Road, Khaperkheda, Nagpur, Maharashtra – 441102',
+    state: 'Maharashtra, Code: 27',
+    phone: '9326169493'
+  };
+  function readPartyAddressBook() {
+    try { const x = JSON.parse(localStorage.getItem(PARTY_ADDRESS_KEY) || '{}'); return x && typeof x === 'object' ? x : {}; }
+    catch (_) { return {}; }
+  }
+  function selectedLabelParty() { return String(document.getElementById('labelPartyName').value || '').trim(); }
+  function loadPartyAddress() {
+    const name = selectedLabelParty();
+    const book = readPartyAddressBook();
+    const saved = book[name.toLocaleLowerCase()] || null;
+    if (saved) {
+      document.getElementById('labelPartyAddress').value = saved.address || '';
+      document.getElementById('labelPartyPhone').value = saved.phone || '';
+    }
+    updateReturnLabelPreview();
+  }
+  function savePartyAddress() {
+    const name = selectedLabelParty();
+    const address = document.getElementById('labelPartyAddress').value.trim();
+    const phone = document.getElementById('labelPartyPhone').value.trim();
+    if (!name) { toast('Select or enter a party name'); return; }
+    if (!address) { toast('Enter the party address'); return; }
+    if (!phone) { toast('Enter the party phone number'); return; }
+    savePartyName(name);
+    const book = readPartyAddressBook();
+    book[name.toLocaleLowerCase()] = { name, address, phone };
+    try { localStorage.setItem(PARTY_ADDRESS_KEY, JSON.stringify(book)); }
+    catch (_) { toast('Could not save party details in this browser'); return; }
+    updateReturnLabelPreview();
+    toast('Party address and phone saved');
+  }
+  function updateReturnLabelPreview() {
+    const preview = document.getElementById('returnLabelPreview');
+    if (!preview) return;
+    const name = selectedLabelParty();
+    const address = String(document.getElementById('labelPartyAddress')?.value || '').trim();
+    const phone = String(document.getElementById('labelPartyPhone')?.value || '').trim();
+    const safe = escapeHtml;
+    preview.innerHTML = `<div class="eyebrow">Shipment</div>
+      <div class="label-kicker">TO</div>
+      <div class="label-party">${safe(name || 'PARTY NAME')}</div>
+      <div class="label-address">${safe(address || 'Full address and PIN code')}${phone ? '<br>Mobile: ' + safe(phone) : ''}</div>
+      <hr class="label-rule">
+      <div class="label-kicker">FROM</div>
+      <div class="from-title">${safe(RETURN_FROM.name)}</div>
+      <div class="from-address">${safe(RETURN_FROM.address)}<br>${safe(RETURN_FROM.state)}<br>Mobile: ${safe(RETURN_FROM.phone)}</div>`;
+  }
+  function printReturnChallanA4() {
+    const name = selectedLabelParty();
+    const address = document.getElementById('labelPartyAddress').value.trim();
+    const phone = document.getElementById('labelPartyPhone').value.trim();
+    if (!name || !address || !phone) { toast('Enter party name, full address and phone number'); return; }
+    const w = window.open('', '_blank', 'width=900,height=1000');
+    if (!w) { toast('Allow pop-ups to print'); return; }
+    const esc = escapeHtml;
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Return Challan - ${esc(name)}</title>
+      <style>
+        @page{size:A4;margin:15mm}*{box-sizing:border-box}body{margin:0;color:#171717;background:#fff;font-family:Arial,Helvetica,sans-serif}
+        .sheet{width:100%;}.topline{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d6d6d6;padding-bottom:8px;margin-bottom:16px;color:#555;font-size:9pt;letter-spacing:2px;text-transform:uppercase}
+        .label{width:100%;border:1px solid #dedede;padding:12mm 11mm;margin-top:12mm;page-break-inside:avoid}.eyebrow{font-size:9pt;letter-spacing:3px;color:#666;text-transform:uppercase;margin-bottom:12mm}
+        .kicker{font-size:10pt;letter-spacing:1.5px;text-transform:uppercase;color:#555;margin-bottom:4mm}.party{font-size:16pt;font-weight:600;margin-bottom:4mm;overflow-wrap:anywhere}.address{font-size:11pt;line-height:1.65;white-space:pre-line;overflow-wrap:anywhere}
+        .rule{border:0;border-top:1px solid #d8d8d8;margin:9mm 0}.from-title{font-size:12pt;font-weight:600;margin-bottom:3mm}.from-address{font-size:10pt;line-height:1.65}
+        .footer{margin-top:12mm;border-top:1px solid #ddd;padding-top:4mm;color:#666;font-size:8pt;letter-spacing:.5px}
+      </style></head><body><main class="sheet"><div class="topline"><span>Shree Vidyasagram</span><span>Return Challan</span></div>
+      <section class="label"><div class="eyebrow">Shipment</div><div class="kicker">TO</div><div class="party">${esc(name)}</div>
+      <div class="address">${esc(address)}<br>Mobile: ${esc(phone)}</div><hr class="rule"><div class="kicker">FROM</div><div class="from-title">${esc(RETURN_FROM.name)}</div>
+      <div class="from-address">${esc(RETURN_FROM.address)}<br>${esc(RETURN_FROM.state)}<br>Mobile: ${esc(RETURN_FROM.phone)}</div><div class="footer">SHREE VIDYASAGARAM · NAGPUR</div></section></main>
+      <script>window.onload=()=>{window.focus();window.print();};<\/script></body></html>`);
+    w.document.close();
   }
 
   function toast(msg) {
@@ -1473,6 +1605,10 @@
   window.showDateReport = showDateReport;
   window.exportDateRangeExcel = exportDateRangeExcel;
   window.renderParties = renderParties;
+  window.loadPartyAddress = loadPartyAddress;
+  window.savePartyAddress = savePartyAddress;
+  window.updateReturnLabelPreview = updateReturnLabelPreview;
+  window.printReturnChallanA4 = printReturnChallanA4;
   window.showPartyReport = showPartyReport;
   window.exportPartyExcel = exportPartyExcel;
   window.exportPartyPDF = exportPartyPDF;
@@ -1487,6 +1623,7 @@
 
   loadSavedParties();
   addItemRow();
+  ['labelPartyAddress','labelPartyPhone'].forEach(id => document.getElementById(id)?.addEventListener('input', updateReturnLabelPreview));
 </script>
 </body>
 </html>
