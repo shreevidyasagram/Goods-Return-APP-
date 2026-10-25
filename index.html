@@ -364,7 +364,7 @@
         <div class="from-title">SHREE VIDYASAGARAM (NAGPUR)</div>
         <div class="from-address">1816, Near State Bank of India, Main Road, Khaperkheda, Nagpur, Maharashtra – 441102
 Maharashtra, Code: 27
-Mobile: 9326169493</div>
+Mobile: 9326169493<br>GSTIN: 27ACXFS0440D1Z1</div>
       </div>
     </div>
   </section>
@@ -873,7 +873,7 @@ Mobile: 9326169493</div>
       <hr class="label-rule">
       <div class="label-kicker">FROM</div>
       <div class="from-title">${safe(RETURN_FROM.name)}</div>
-      <div class="from-address">${safe(RETURN_FROM.address)}<br>${safe(RETURN_FROM.state)}<br>Mobile: ${safe(RETURN_FROM.phone)}</div>`;
+      <div class="from-address">${safe(RETURN_FROM.address)}<br>${safe(RETURN_FROM.state)}<br>Mobile: ${safe(RETURN_FROM.phone)}<br>GSTIN: 27ACXFS0440D1Z1</div>`;
   }
   function printReturnChallanA4() {
     const name = selectedLabelParty();
@@ -896,7 +896,7 @@ Mobile: 9326169493</div>
       </style></head><body><main class="sheet"><div class="topline"><span>Shree Vidyasagram</span><span>Return Challan</span></div>
       <section class="label"><div class="eyebrow">Shipment</div><div class="kicker">TO</div><div class="party">${esc(name)}</div>
       <div class="address">${esc(address)}<br>Mobile: ${esc(phone)}</div><hr class="rule"><div class="kicker">FROM</div><div class="from-title">${esc(RETURN_FROM.name)}</div>
-      <div class="from-address">${esc(RETURN_FROM.address)}<br>${esc(RETURN_FROM.state)}<br>Mobile: ${esc(RETURN_FROM.phone)}</div><div class="footer">SHREE VIDYASAGARAM · NAGPUR</div></section></main>
+      <div class="from-address">${esc(RETURN_FROM.address)}<br>${esc(RETURN_FROM.state)}<br>Mobile: ${esc(RETURN_FROM.phone)}<br>GSTIN: 27ACXFS0440D1Z1</div><div class="footer">SHREE VIDYASAGARAM · NAGPUR</div></section></main>
       <script>window.onload=()=>{window.focus();window.print();};<\/script></body></html>`);
     w.document.close();
   }
